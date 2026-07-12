@@ -27,7 +27,17 @@ function normalizeLine(line: string | BodyLine) {
   return typeof line === "string" ? line.trim() : line.japanese.trim();
 }
 
-export function HighlightedBody({ documentId, words, lines }: { documentId: string; words: HighlightWord[]; lines?: Array<string | BodyLine> | null }) {
+export function HighlightedBody({
+  documentId,
+  words,
+  lines,
+  initialTranslations,
+}: {
+  documentId: string;
+  words: HighlightWord[];
+  lines?: Array<string | BodyLine> | null;
+  initialTranslations?: Record<string, string> | null;
+}) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const lookup = new Map<string, HighlightWord>();
   for (const word of words) {
@@ -38,8 +48,14 @@ export function HighlightedBody({ documentId, words, lines }: { documentId: stri
   const terms = [...lookup.keys()].sort((a, b) => b.length - a.length);
   const matcher = terms.length > 0 ? new RegExp(`(${terms.map(escapeRegExp).join("|")})`, "g") : null;
   const displayLines = (lines ?? []).map(normalizeLine).filter(Boolean);
-  const [openIndexes, setOpenIndexes] = useState<number[]>([]);
-  const [translations, setTranslations] = useState<Record<number, string>>({});
+  const normalizedInitialTranslations = Object.entries(initialTranslations ?? {}).reduce<Record<number, string>>((acc, [key, value]) => {
+    const index = Number(key);
+    const translation = typeof value === "string" ? value.trim() : "";
+    if (Number.isInteger(index) && index >= 0 && translation) acc[index] = translation;
+    return acc;
+  }, {});
+  const [openIndexes, setOpenIndexes] = useState<number[]>(Object.keys(normalizedInitialTranslations).map(Number));
+  const [translations, setTranslations] = useState<Record<number, string>>(normalizedInitialTranslations);
   const [loadingIndexes, setLoadingIndexes] = useState<number[]>([]);
   const [selectedText, setSelectedText] = useState("");
   const [selectionButton, setSelectionButton] = useState<{ top: number; left: number } | null>(null);
@@ -183,7 +199,18 @@ export function HighlightedBody({ documentId, words, lines }: { documentId: stri
       ...current,
       error: "",
       localVocabulary: current.localVocabulary.map((item) => item.id === payload.vocabularyId ? { ...item, isSaved: true } : item),
-      entries: current.entries.map((item) => item.id === payload.entryId ? { ...item, isSaved: true } : item),
+      entries: current.entries.map((item) => {
+        if (payload.entryId && item.id === payload.entryId) return { ...item, isSaved: true };
+        if (
+          payload.aiEntry &&
+          item.source === "ai" &&
+          (item.primarySpelling ?? item.primaryReading) === payload.aiEntry.dictionaryForm &&
+          item.primaryReading === payload.aiEntry.reading
+        ) {
+          return { ...item, isSaved: true };
+        }
+        return item;
+      }),
     }) : current);
   }
 
