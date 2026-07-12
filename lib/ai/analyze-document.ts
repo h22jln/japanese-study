@@ -1,21 +1,25 @@
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { analysisSchema } from "@/lib/ai/analysis-schema";
+import { extractPdfText } from "@/lib/pdf/extract-text";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 const ANALYSIS_PROMPT = `당신은 한국인 일본어 학습자를 위한 교재 분석가입니다.
-첨부된 PDF 전체를 분석하세요.
+아래에 제공된 PDF 추출 텍스트 전체를 분석하세요.
 
 - title: 자료를 대표하는 간결한 일본어 또는 한국어 제목
-- bodyText: PDF의 일본어 본문을 처음부터 끝까지 원문 그대로 추출. 제목, 본문, 대화문은 유지하고 반복되는 머리말·꼬리말·페이지 번호는 제외. 문단 사이는 빈 줄 하나로 구분
+- bodyLines: 화면에 보여줄 일본어 본문 한 줄씩만 담은 배열
+- 줄은 학습용으로 자연스럽게 나누고, 머리말·꼬리말·페이지 번호는 제외
 - vocabulary: 학습 가치가 높은 일본어 단어를 중복 없이 추출
-- surface에는 bodyText에 실제 등장하는 표기를 정확히 사용
+- surface에는 bodyLines에 실제 등장하는 표기를 정확히 사용
 - dictionaryForm에는 활용형이 아닌 사전형을 사용
 - reading에는 히라가나 읽기를 사용
+- 단어 항목에는 예문을 만들지 말 것
 - JLPT 급수를 확신할 수 없으면 null
 - sourcePage는 확인 가능한 경우에만 페이지 번호, 아니면 null
 - grammarPoints: 자료에서 실제로 사용된 주요 문법을 추출
-- 예문이 자료에 없으면 문맥에 맞는 짧은 예문을 만들고 한국어 번역 제공`;
+- 예문이 자료에 없으면 문맥에 맞는 짧은 예문을 만들고 한국어 번역 제공
+- PDF 추출 결과에는 줄바꿈 노이즈가 있을 수 있으니, 의미가 자연스럽게 이어지도록 판단해서 정리`;
 
 export async function analyzeDocument(payload: { documentId: string; userId: string }) {
   if (!process.env.OPENAI_API_KEY) throw new Error("OpenAI API key is missing");
@@ -36,14 +40,14 @@ export async function analyzeDocument(payload: { documentId: string; userId: str
     const { data: pdf, error: downloadError } = await supabase.storage.from("documents").download(document.file_path);
     if (downloadError || !pdf) throw new Error(`PDF download failed: ${downloadError?.message ?? "unknown"}`);
 
-    const pdfBase64 = Buffer.from(await pdf.arrayBuffer()).toString("base64");
+    const pdfBuffer = Buffer.from(await pdf.arrayBuffer());
+    const extracted = await extractPdfText(pdfBuffer);
     const response = await openai.responses.parse({
       model: process.env.OPENAI_MODEL ?? "gpt-5.6-luna",
       input: [{
         role: "user",
         content: [
-          { type: "input_file", filename: `${document.title}.pdf`, file_data: `data:application/pdf;base64,${pdfBase64}`, detail: "low" },
-          { type: "input_text", text: ANALYSIS_PROMPT },
+          { type: "input_text", text: `${ANALYSIS_PROMPT}\n\n자료 제목: ${document.title}\n\n추출 방식: ${extracted.method}\n\n[PDF 추출 텍스트 시작]\n${extracted.text}\n[PDF 추출 텍스트 끝]` },
         ],
       }],
       text: { format: zodTextFormat(analysisSchema, "japanese_study_analysis") },
@@ -76,8 +80,8 @@ export async function analyzeDocument(payload: { documentId: string; userId: str
         document_id: payload.documentId,
         vocabulary_id: vocabulary.id,
         surface_form: word.surface,
-        example_ja: word.exampleJa,
-        example_ko: word.exampleKo,
+        example_ja: null,
+        example_ko: null,
         source_page: word.sourcePage,
       });
       if (linkError) throw linkError;
@@ -98,8 +102,8 @@ export async function analyzeDocument(payload: { documentId: string; userId: str
     }
 
     const { error: completeError } = await supabase.from("documents").update({
-      title: analysis.title,
-      body_text: analysis.bodyText,
+      body_lines: analysis.bodyLines,
+      body_line_translations: {},
       status: "completed",
       error_message: null,
     }).eq("id", payload.documentId).eq("user_id", payload.userId);

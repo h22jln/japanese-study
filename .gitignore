@@ -6,4 +6,6 @@ node_modules
 !.env.example
 *.log
 .DS_Store
-
+scripts/__pycache__/
+work/
+supabase/.temp/

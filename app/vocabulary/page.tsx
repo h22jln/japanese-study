@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, BookOpen, FileText } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { SaveVocabularyButton } from "@/components/vocabulary/save-vocabulary-button";
+import { formatPartOfSpeech } from "@/lib/dictionary/format-part-of-speech";
 
 type SavedCard = {
   id: string;
@@ -18,18 +19,6 @@ type SavedCard = {
   };
 };
 
-type VocabularyExample = {
-  vocabulary_id: string;
-  surface_form: string | null;
-  example_ja: string | null;
-  example_ko: string | null;
-  source_page: number | null;
-  documents: {
-    id: string;
-    title: string;
-  } | null;
-};
-
 export default async function VocabularyPage() {
   const supabase = await createServerSupabaseClient();
   if (!supabase) redirect("/login");
@@ -43,21 +32,6 @@ export default async function VocabularyPage() {
     .order("saved_at", { ascending: false });
 
   const savedCards = (cards ?? []) as unknown as SavedCard[];
-  const vocabularyIds = savedCards.map((card) => card.vocabulary_id);
-
-  const { data: examples } = vocabularyIds.length > 0
-    ? await supabase
-      .from("document_vocabulary")
-      .select("vocabulary_id,surface_form,example_ja,example_ko,source_page,documents(id,title)")
-      .in("vocabulary_id", vocabularyIds)
-    : { data: [] };
-
-  const examplesByVocabulary = new Map<string, VocabularyExample[]>();
-  ((examples ?? []) as unknown as VocabularyExample[]).forEach((example) => {
-    const current = examplesByVocabulary.get(example.vocabulary_id) ?? [];
-    current.push(example);
-    examplesByVocabulary.set(example.vocabulary_id, current);
-  });
 
   return (
     <main className="min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 md:px-10">
@@ -82,44 +56,29 @@ export default async function VocabularyPage() {
           </section>
         ) : (
           <section className="mt-8 grid gap-4 sm:mt-10">
-            {savedCards.map((card) => {
-              const cardExamples = examplesByVocabulary.get(card.vocabulary_id) ?? [];
+            {savedCards.map((card) => (
+              <article key={card.id} className="rounded-3xl border border-[var(--line)] bg-white p-5 sm:p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    {(() => {
+                      const partOfSpeech = formatPartOfSpeech(card.vocabulary.part_of_speech);
 
-              return (
-                <article key={card.id} className="rounded-3xl border border-[var(--line)] bg-white p-5 sm:p-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="break-words text-xl font-bold">{card.vocabulary.dictionary_form}</h2>
-                        {card.vocabulary.jlpt_level && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">{card.vocabulary.jlpt_level}</span>}
-                      </div>
-                      <p className="mt-1 break-words text-sm text-[var(--muted)]">{card.vocabulary.reading}{card.vocabulary.part_of_speech ? ` · ${card.vocabulary.part_of_speech}` : ""}</p>
-                      <p className="mt-3 text-base font-semibold">{card.vocabulary.meaning_ko}</p>
-                    </div>
-                    <SaveVocabularyButton vocabularyId={card.vocabulary.id} userId={user.id} initialSaved />
-                  </div>
-
-                  <div className="mt-5 grid gap-3">
-                    {cardExamples.length === 0 ? (
-                      <div className="rounded-2xl bg-[#f7f7f4] p-4 text-sm text-[var(--muted)]">아직 연결된 본문 예문이 없습니다.</div>
-                    ) : (
-                      cardExamples.map((example, index) => (
-                        <div key={`${card.id}-${example.documents?.id ?? "document"}-${index}`} className="rounded-2xl bg-[#f7f7f4] p-4">
-                          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-[var(--muted)]">
-                            <FileText size={14} />
-                            {example.documents ? <Link href={`/documents/${example.documents.id}`} className="hover:underline">{example.documents.title}</Link> : "자료"}
-                            {example.source_page && <span>p.{example.source_page}</span>}
-                            {example.surface_form && <span>본문형: {example.surface_form}</span>}
+                      return (
+                        <>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="break-words text-xl font-bold">{card.vocabulary.dictionary_form}</h2>
+                            {card.vocabulary.jlpt_level && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">{card.vocabulary.jlpt_level}</span>}
                           </div>
-                          {example.example_ja && <p className="leading-7">{example.example_ja}</p>}
-                          {example.example_ko && <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{example.example_ko}</p>}
-                        </div>
-                      ))
-                    )}
+                          <p className="mt-1 break-words text-sm text-[var(--muted)]">{card.vocabulary.reading}{partOfSpeech ? ` · ${partOfSpeech}` : ""}</p>
+                          <p className="mt-3 text-base font-semibold">{card.vocabulary.meaning_ko}</p>
+                        </>
+                      );
+                    })()}
                   </div>
-                </article>
-              );
-            })}
+                  <SaveVocabularyButton vocabularyId={card.vocabulary.id} userId={user.id} initialSaved />
+                </div>
+              </article>
+            ))}
           </section>
         )}
       </div>

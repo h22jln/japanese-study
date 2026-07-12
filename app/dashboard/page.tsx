@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { PdfUploadButton } from "@/components/documents/pdf-upload-button";
 import { AnalyzeButton } from "@/components/documents/analyze-button";
 import { DocumentStatusRefresher } from "@/components/documents/document-status-refresher";
+import { PinDocumentButton } from "@/components/documents/pin-document-button";
 import Link from "next/link";
 
 type DocumentItem = {
@@ -11,6 +12,7 @@ type DocumentItem = {
   title: string;
   status: "queued" | "processing" | "completed" | "failed";
   created_at: string;
+  pinned_at: string | null;
 };
 
 const statusLabels: Record<DocumentItem["status"], string> = {
@@ -32,7 +34,7 @@ export default async function DashboardPage() {
     if (!user) redirect("/login");
 
     const [{ data }, { count }, { count: savedGrammarCount }] = await Promise.all([
-      supabase.from("documents").select("id,title,status,created_at").order("created_at", { ascending: false }),
+      supabase.from("documents").select("id,title,status,created_at,pinned_at").order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
       supabase.from("review_cards").select("id", { count: "exact", head: true }),
       supabase.from("saved_grammar_points").select("id", { count: "exact", head: true }),
     ]);
@@ -50,11 +52,10 @@ export default async function DashboardPage() {
           <PdfUploadButton />
         </header>
 
-        <section className="mt-8 grid grid-cols-2 gap-2 sm:mt-10 sm:grid-cols-4 sm:gap-5">
+        <section className="mt-8 grid grid-cols-1 gap-2 sm:mt-10 sm:grid-cols-3 sm:gap-5">
           <div className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3 sm:p-6"><FileText size={18} /><p className="mt-4 truncate text-[11px] text-[var(--muted)] sm:mt-6 sm:text-sm">업로드 자료</p><strong className="mt-1 block text-2xl sm:text-3xl">{documents.length}</strong></div>
           <Link href="/vocabulary" className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3 transition hover:border-[var(--accent)] sm:p-6"><BookOpen size={18} /><p className="mt-4 truncate text-[11px] text-[var(--muted)] sm:mt-6 sm:text-sm">저장 단어</p><strong className="mt-1 block text-2xl sm:text-3xl">{vocabularyCount}</strong></Link>
           <Link href="/grammar" className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3 transition hover:border-[var(--accent)] sm:p-6"><Sparkles size={18} /><p className="mt-4 truncate text-[11px] text-[var(--muted)] sm:mt-6 sm:text-sm">저장 문법</p><strong className="mt-1 block text-2xl sm:text-3xl">{grammarCount}</strong></Link>
-          <div className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3 sm:p-6"><span className="text-lg sm:text-xl">連</span><p className="mt-4 truncate text-[11px] text-[var(--muted)] sm:mt-6 sm:text-sm">연속 학습</p><strong className="mt-1 block text-2xl sm:text-3xl">0일</strong></div>
         </section>
 
         {documents.length === 0 ? (
@@ -69,11 +70,14 @@ export default async function DashboardPage() {
                 <li key={document.id} className="flex flex-col items-stretch gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
                   <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#f1eee7] sm:h-11 sm:w-11"><FileText size={19} /></span>
-                    <div className="min-w-0"><Link href={`/documents/${document.id}`} className="truncate font-semibold hover:underline">{document.title}</Link><p className="mt-1 text-xs text-[var(--muted)]">{new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(new Date(document.created_at))}</p></div>
+                    <div className="min-w-0"><div className="flex items-center gap-2"><Link href={`/documents/${document.id}`} className="truncate font-semibold hover:underline">{document.title}</Link>{document.pinned_at && <span className="rounded-full bg-[#fbe5df] px-2 py-0.5 text-[10px] font-bold text-[var(--accent)]">PIN</span>}</div><p className="mt-1 text-xs text-[var(--muted)]">{new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(new Date(document.created_at))}</p></div>
                   </div>
-                  <div className="flex shrink-0 items-center justify-between gap-3 pl-[52px] text-left sm:block sm:pl-0 sm:text-right">
-                    <span className="inline-block rounded-full bg-[#f1eee7] px-3 py-1.5 text-xs font-semibold text-[var(--muted)]">{statusLabels[document.status]}</span>
-                    {(document.status === "queued" || document.status === "failed") && <div className="sm:mt-2"><AnalyzeButton documentId={document.id} /></div>}
+                  <div className="flex shrink-0 items-center justify-between gap-3 pl-[52px] text-left sm:pl-0">
+                    <PinDocumentButton documentId={document.id} initialPinned={Boolean(document.pinned_at)} compact />
+                    <div className="sm:text-right">
+                      <span className="inline-block rounded-full bg-[#f1eee7] px-3 py-1.5 text-xs font-semibold text-[var(--muted)]">{statusLabels[document.status]}</span>
+                      {(document.status === "queued" || document.status === "failed") && <div className="mt-2"><AnalyzeButton documentId={document.id} /></div>}
+                    </div>
                   </div>
                 </li>
               ))}
