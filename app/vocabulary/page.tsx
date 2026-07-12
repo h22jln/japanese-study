@@ -19,6 +19,23 @@ type SavedCard = {
   };
 };
 
+function groupCardsBySavedDate(cards: SavedCard[]) {
+  const formatter = new Intl.DateTimeFormat("ko-KR", { dateStyle: "long" });
+  const groups = new Map<string, SavedCard[]>();
+
+  for (const card of cards) {
+    const key = card.saved_at ? formatter.format(new Date(card.saved_at)) : "날짜 미상";
+    const existing = groups.get(key);
+    if (existing) {
+      existing.push(card);
+    } else {
+      groups.set(key, [card]);
+    }
+  }
+
+  return [...groups.entries()];
+}
+
 export default async function VocabularyPage() {
   const supabase = await createServerSupabaseClient();
   if (!supabase) redirect("/login");
@@ -32,6 +49,7 @@ export default async function VocabularyPage() {
     .order("saved_at", { ascending: false });
 
   const savedCards = (cards ?? []) as unknown as SavedCard[];
+  const groupedCards = groupCardsBySavedDate(savedCards);
 
   return (
     <main className="min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 md:px-10">
@@ -55,29 +73,40 @@ export default async function VocabularyPage() {
             </div>
           </section>
         ) : (
-          <section className="mt-8 grid gap-4 sm:mt-10">
-            {savedCards.map((card) => (
-              <article key={card.id} className="rounded-3xl border border-[var(--line)] bg-white p-5 sm:p-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    {(() => {
-                      const partOfSpeech = formatPartOfSpeech(card.vocabulary.part_of_speech);
-
-                      return (
-                        <>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="break-words text-xl font-bold">{card.vocabulary.dictionary_form}</h2>
-                            {card.vocabulary.jlpt_level && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">{card.vocabulary.jlpt_level}</span>}
-                          </div>
-                          <p className="mt-1 break-words text-sm text-[var(--muted)]">{card.vocabulary.reading}{partOfSpeech ? ` · ${partOfSpeech}` : ""}</p>
-                          <p className="mt-3 text-base font-semibold">{card.vocabulary.meaning_ko}</p>
-                        </>
-                      );
-                    })()}
-                  </div>
-                  <SaveVocabularyButton vocabularyId={card.vocabulary.id} userId={user.id} initialSaved />
+          <section className="mt-8 space-y-8 sm:mt-10">
+            {groupedCards.map(([savedDate, cards]) => (
+              <section key={savedDate}>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-bold">{savedDate}</h2>
+                  <span className="text-xs text-[var(--muted)]">{cards.length}개</span>
                 </div>
-              </article>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {cards.map((card) => (
+                    <article key={card.id} className="rounded-3xl border border-[var(--line)] bg-white p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          {(() => {
+                            const partOfSpeech = formatPartOfSpeech(card.vocabulary.part_of_speech);
+
+                            return (
+                              <>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h3 className="break-words text-xl font-bold">{card.vocabulary.dictionary_form}</h3>
+                                  {card.vocabulary.jlpt_level && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">{card.vocabulary.jlpt_level}</span>}
+                                </div>
+                                <p className="mt-1 break-words text-sm text-[var(--muted)]">{card.vocabulary.reading}{partOfSpeech ? ` · ${partOfSpeech}` : ""}</p>
+                                <p className="mt-3 text-base font-semibold">{card.vocabulary.meaning_ko}</p>
+                              </>
+                            );
+                          })()}
+                        </div>
+                        <SaveVocabularyButton vocabularyId={card.vocabulary.id} userId={user.id} initialSaved />
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
             ))}
           </section>
         )}

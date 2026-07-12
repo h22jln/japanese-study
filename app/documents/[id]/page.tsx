@@ -60,7 +60,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   const savedGrammarPointIds = new Set((savedGrammarPoints ?? []).map((card) => card.grammar_point_id));
 
   return (
-    <main className="min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 md:px-10">
+    <main className="min-h-screen px-4 py-6 sm:px-6 sm:py-8 md:px-10">
       <DocumentStatusRefresher active={isPending} />
       <div className="mx-auto max-w-7xl">
         <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--muted)] hover:text-[var(--foreground)]"><ArrowLeft size={16} /> 자료 목록</Link>
@@ -77,12 +77,16 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
             <div><Sparkles className="mx-auto text-[var(--accent)]" /><h2 className="mt-4 text-xl font-bold">{document.status === "processing" ? "AI가 자료를 분석하고 있어요" : document.status === "failed" ? "분석을 완료하지 못했어요" : "분석을 기다리고 있어요"}</h2><p className="mt-2 max-w-lg text-sm leading-6 text-[var(--muted)]">{document.error_message ?? (document.status === "processing" ? "PDF 분량에 따라 몇 분 정도 걸릴 수 있습니다. 이 화면은 자동으로 갱신됩니다." : "AI 분석 버튼을 눌러 분석을 시작해주세요.")}</p></div>
           </section>
         ) : (
-          <div className="mt-8 grid items-start gap-5 sm:mt-10 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-7">
-            <aside className="rounded-3xl border border-[var(--line)] bg-white p-5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+          <div className="mt-8 grid items-start gap-5 sm:mt-10 sm:grid-cols-[260px_minmax(0,1fr)] sm:gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-7">
+            <aside className="order-2 rounded-3xl border border-[var(--line)] bg-white p-5 sm:order-1 sm:sticky sm:top-6 sm:flex sm:max-h-[calc(100vh-3rem)] sm:self-start sm:flex-col sm:overflow-hidden">
               <div className="flex items-center justify-between"><div className="flex items-center gap-2"><BookOpen size={18} className="text-[var(--accent)]" /><h2 className="font-bold">추출 단어</h2></div><span className="text-xs text-[var(--muted)]">{vocabularyWords.length}개</span></div>
-              <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="mt-5 grid gap-2 sm:min-h-0 sm:grid-cols-1 sm:overflow-y-auto sm:pr-1">
                 {vocabularyWords.map((word, index) => (
-                  <article key={`${word.vocabulary.dictionary_form}-${index}`} className="min-w-0 rounded-xl bg-[#f7f7f4] p-3.5">
+                  <article
+                    id={`vocab-card-${word.vocabulary.id}`}
+                    key={`${word.vocabulary.dictionary_form}-${index}`}
+                    className="vocab-card min-w-0 scroll-mt-28 rounded-xl bg-[#f7f7f4] p-3.5 transition"
+                  >
                     {(() => {
                       const partOfSpeech = formatPartOfSpeech(word.vocabulary.part_of_speech);
 
@@ -104,7 +108,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
               </div>
             </aside>
 
-            <div className="min-w-0">
+            <div className="order-1 min-w-0 sm:order-2">
               <section className="rounded-3xl border border-[var(--line)] bg-white p-5 sm:p-7 md:p-10">
                 <div className="flex items-center gap-2"><FileText size={19} className="text-[var(--accent)]" /><h2 className="font-bold">본문</h2></div>
                 <p className="mt-2 text-xs text-[var(--muted)]">표시된 단어에 마우스를 올리거나 선택하면 뜻을 볼 수 있고, 각 줄의 해석은 버튼을 눌렀을 때만 열립니다.</p>

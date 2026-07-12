@@ -7,6 +7,7 @@ import { formatPartOfSpeech, formatPartOfSpeechList } from "@/lib/dictionary/for
 type HighlightWord = {
   surface_form: string | null;
   vocabulary: {
+    id: string;
     dictionary_form: string;
     reading: string;
     meaning_ko: string;
@@ -46,9 +47,28 @@ export function HighlightedBody({ documentId, words, lines }: { documentId: stri
     loading: boolean;
     error: string;
     localVocabulary: Array<{ id: string; dictionaryForm: string; reading: string; meaningKo: string; partOfSpeech: string | null; isSaved: boolean }>;
-    entries: Array<{ id: string; primarySpelling: string | null; primaryReading: string; spellings: string[]; readings: string[]; glosses: string[]; partsOfSpeech: string[]; isCommon: boolean; isSaved?: boolean }>;
+    entries: Array<{ id: string; primarySpelling: string | null; primaryReading: string; spellings: string[]; readings: string[]; glosses: string[]; partsOfSpeech: string[]; isCommon: boolean; isSaved?: boolean; source?: "db" | "ai" }>;
   } | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+
+  function focusVocabularyCard(vocabularyId: string) {
+    const card = document.getElementById(`vocab-card-${vocabularyId}`);
+    if (!card) return;
+
+    card.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+
+    card.classList.remove("vocab-card-flash");
+    window.setTimeout(() => {
+      card.classList.add("vocab-card-flash");
+    }, 30);
+    window.setTimeout(() => {
+      card.classList.remove("vocab-card-flash");
+    }, 1800);
+  }
 
   async function toggleLine(index: number) {
     const isOpen = openIndexes.includes(index);
@@ -140,7 +160,11 @@ export function HighlightedBody({ documentId, words, lines }: { documentId: stri
     setSelectionButton(null);
   }
 
-  async function saveDictionaryItem(payload: { entryId?: string; vocabularyId?: string }, key: string) {
+  async function saveDictionaryItem(payload: {
+    entryId?: string;
+    vocabularyId?: string;
+    aiEntry?: { dictionaryForm: string; reading: string; meaningKo: string; partOfSpeech?: string | null };
+  }, key: string) {
     setSavingKey(key);
     const response = await fetch("/api/dictionary/save", {
       method: "POST",
@@ -198,7 +222,19 @@ export function HighlightedBody({ documentId, words, lines }: { documentId: stri
                   const word = lookup.get(part);
                   if (!word) return <span key={index}>{part}</span>;
                   return (
-                    <span key={index} tabIndex={0} className="group relative inline cursor-help rounded bg-[#ffe8a3]/70 px-0.5 outline-none transition hover:bg-[#ffd866] focus:bg-[#ffd866]">
+                    <span
+                      key={index}
+                      tabIndex={0}
+                      role="button"
+                      onClick={() => focusVocabularyCard(word.vocabulary.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          focusVocabularyCard(word.vocabulary.id);
+                        }
+                      }}
+                      className="group relative inline cursor-pointer rounded bg-[#ffe8a3]/70 px-0.5 outline-none transition hover:bg-[#ffd866] focus:bg-[#ffd866]"
+                    >
                       {part}
                       <span role="tooltip" className="pointer-events-none absolute bottom-[calc(100%+.45rem)] left-0 z-30 hidden w-56 rounded-xl bg-[#20201d] p-3 text-left text-sm leading-5 tracking-normal text-white shadow-xl group-hover:block group-focus:block">
                         <strong className="block text-base">{word.vocabulary.dictionary_form}</strong>
@@ -287,12 +323,25 @@ export function HighlightedBody({ documentId, words, lines }: { documentId: stri
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-bold">{entry.primarySpelling ?? entry.primaryReading}</p>
                       <span className="text-sm text-[var(--muted)]">{entry.primaryReading}</span>
+                      {entry.source === "ai" && <span className="rounded-full bg-[#f7f1eb] px-2 py-0.5 text-[10px] font-bold text-[var(--accent)]">AI</span>}
                       {entry.isCommon && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">common</span>}
                     </div>
                     <button
                       type="button"
                       disabled={entry.isSaved || savingKey === `entry-${entry.id}`}
-                      onClick={() => saveDictionaryItem({ entryId: entry.id }, `entry-${entry.id}`)}
+                      onClick={() => saveDictionaryItem(
+                        entry.source === "ai"
+                          ? {
+                              aiEntry: {
+                                dictionaryForm: entry.primarySpelling ?? entry.primaryReading,
+                                reading: entry.primaryReading,
+                                meaningKo: entry.glosses[0] ?? "",
+                                partOfSpeech: entry.partsOfSpeech[0] ?? null,
+                              },
+                            }
+                          : { entryId: entry.id },
+                        `entry-${entry.id}`,
+                      )}
                       className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-white text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
                       aria-label={entry.isSaved ? "저장됨" : "단어장 저장"}
                     >

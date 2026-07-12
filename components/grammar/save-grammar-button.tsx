@@ -48,11 +48,11 @@ export function SaveGrammarButton({ grammarPointId, userId, initialSaved, compac
         className={[
           "inline-flex items-center justify-center gap-1.5 rounded-full border font-bold transition disabled:cursor-not-allowed disabled:opacity-60",
           saved ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]",
-          compact ? "h-8 w-8" : "px-3 py-1.5 text-xs",
+          compact ? "h-8 w-8" : saved ? "h-9 w-9 text-xs" : "px-3 py-1.5 text-xs",
         ].join(" ")}
       >
         {saved ? <BookmarkCheck size={compact ? 15 : 14} /> : <Bookmark size={compact ? 15 : 14} />}
-        {!compact && (saved ? "저장됨" : "저장")}
+        {!compact && !saved && "저장"}
       </button>
       {errorMessage && <p className="mt-1 text-[10px] font-semibold text-[var(--accent-dark)]">{errorMessage}</p>}
     </div>

@@ -3,9 +3,21 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import type { DictionaryEntry } from "@/lib/dictionary/types";
 import { translateGlossesToKorean } from "@/lib/dictionary/translate-glosses";
+import { searchJapaneseTermWithAI } from "@/lib/ai/search-japanese-term";
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function isSingleKanji(term: string) {
+  return /^[\p{Script=Han}]$/u.test(term);
+}
+
+function canUseAiFallback(term: string) {
+  const normalized = term.trim();
+  if (normalized.length < 2) return false;
+  if (isSingleKanji(normalized)) return false;
+  return true;
 }
 
 export async function GET(request: Request) {
@@ -87,6 +99,65 @@ export async function GET(request: Request) {
     : { data: [] };
   const savedVocabularyIds = new Set((savedCards ?? []).map((item) => item.vocabulary_id));
 
+  let fallbackAiEntry: {
+    id: string;
+    primarySpelling: string | null;
+    primaryReading: string;
+    spellings: string[];
+    readings: string[];
+    glosses: string[];
+    partsOfSpeech: string[];
+    isCommon: boolean;
+    isSaved?: boolean;
+    source: "ai";
+  } | null = null;
+
+  if (localVocabulary.length === 0 && entriesWithKorean.length === 0 && canUseAiFallback(term)) {
+    const { data: cachedAiEntry } = await admin
+      .from("dictionary_ai_cache")
+      .select("term,dictionary_form,reading,meanings_ko,parts_of_speech")
+      .eq("term", term)
+      .maybeSingle();
+
+    if (cachedAiEntry) {
+      fallbackAiEntry = {
+        id: `ai:${cachedAiEntry.term}`,
+        primarySpelling: cachedAiEntry.dictionary_form,
+        primaryReading: cachedAiEntry.reading,
+        spellings: [cachedAiEntry.dictionary_form],
+        readings: [cachedAiEntry.reading],
+        glosses: cachedAiEntry.meanings_ko.slice(0, 4),
+        partsOfSpeech: cachedAiEntry.parts_of_speech.slice(0, 3),
+        isCommon: false,
+        source: "ai",
+      };
+    } else {
+      const aiResult = await searchJapaneseTermWithAI(term);
+      if (aiResult) {
+        await admin.from("dictionary_ai_cache").upsert({
+          term,
+          dictionary_form: aiResult.dictionaryForm,
+          reading: aiResult.reading,
+          meanings_ko: aiResult.meaningKo.slice(0, 4),
+          parts_of_speech: aiResult.partOfSpeech.slice(0, 3),
+          updated_at: new Date().toISOString(),
+        });
+
+        fallbackAiEntry = {
+          id: `ai:${term}`,
+          primarySpelling: aiResult.dictionaryForm,
+          primaryReading: aiResult.reading,
+          spellings: [aiResult.dictionaryForm],
+          readings: [aiResult.reading],
+          glosses: aiResult.meaningKo.slice(0, 4),
+          partsOfSpeech: aiResult.partOfSpeech.slice(0, 3),
+          isCommon: false,
+          source: "ai",
+        };
+      }
+    }
+  }
+
   return NextResponse.json({
     term,
     localVocabulary: (localVocabulary ?? []).map((item) => ({
@@ -97,15 +168,19 @@ export async function GET(request: Request) {
       partOfSpeech: item.part_of_speech,
       isSaved: savedVocabularyIds.has(item.id),
     })),
-    entries: entriesWithKorean.map((entry) => ({
-      id: entry.id,
-      primarySpelling: entry.primary_spelling,
-      primaryReading: entry.primary_reading,
-      spellings: entry.spellings,
-      readings: entry.readings,
-      glosses: (entry.glosses_ko.length > 0 ? entry.glosses_ko : entry.glosses).slice(0, 6),
-      partsOfSpeech: entry.parts_of_speech.slice(0, 4),
-      isCommon: entry.is_common,
-    })),
+    entries: [
+      ...entriesWithKorean.map((entry) => ({
+        id: entry.id,
+        primarySpelling: entry.primary_spelling,
+        primaryReading: entry.primary_reading,
+        spellings: entry.spellings,
+        readings: entry.readings,
+        glosses: (entry.glosses_ko.length > 0 ? entry.glosses_ko : entry.glosses).slice(0, 6),
+        partsOfSpeech: entry.parts_of_speech.slice(0, 4),
+        isCommon: entry.is_common,
+        source: "db" as const,
+      })),
+      ...(fallbackAiEntry ? [fallbackAiEntry] : []),
+    ],
   });
 }

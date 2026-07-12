@@ -6,6 +6,12 @@ import { formatPartOfSpeech } from "@/lib/dictionary/format-part-of-speech";
 type SavePayload = {
   entryId?: string;
   vocabularyId?: string;
+  aiEntry?: {
+    dictionaryForm: string;
+    reading: string;
+    meaningKo: string;
+    partOfSpeech?: string | null;
+  };
 };
 
 export async function POST(request: Request) {
@@ -46,6 +52,35 @@ export async function POST(request: Request) {
 
     if (vocabularyError || !vocabulary) {
       return NextResponse.json({ error: "단어 저장에 실패했습니다." }, { status: 500 });
+    }
+
+    vocabularyId = vocabulary.id;
+  }
+
+  if (!vocabularyId && payload?.aiEntry) {
+    const dictionaryForm = payload.aiEntry.dictionaryForm?.trim();
+    const reading = payload.aiEntry.reading?.trim();
+    const meaningKo = payload.aiEntry.meaningKo?.trim();
+    const partOfSpeech = payload.aiEntry.partOfSpeech?.trim() || null;
+
+    if (!dictionaryForm || !reading || !meaningKo) {
+      return NextResponse.json({ error: "AI 단어 정보가 올바르지 않습니다." }, { status: 400 });
+    }
+
+    const { data: vocabulary, error: vocabularyError } = await admin
+      .from("vocabulary")
+      .upsert({
+        user_id: user.id,
+        dictionary_form: dictionaryForm,
+        reading,
+        meaning_ko: meaningKo,
+        part_of_speech: partOfSpeech,
+      }, { onConflict: "user_id,dictionary_form,reading" })
+      .select("id")
+      .single();
+
+    if (vocabularyError || !vocabulary) {
+      return NextResponse.json({ error: "AI 단어 저장에 실패했습니다." }, { status: 500 });
     }
 
     vocabularyId = vocabulary.id;

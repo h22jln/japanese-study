@@ -48,9 +48,26 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const cacheKey = String(index);
   if (cache[cacheKey]?.trim()) return NextResponse.json({ translation: cache[cacheKey] });
 
+  const { data: globalCache } = await admin
+    .from("line_translation_cache")
+    .select("translation_ko")
+    .eq("source_text", text)
+    .maybeSingle();
+
+  if (globalCache?.translation_ko?.trim()) {
+    const nextCache = { ...cache, [cacheKey]: globalCache.translation_ko };
+    await admin.from("documents").update({ body_line_translations: nextCache }).eq("id", id).eq("user_id", user.id);
+    return NextResponse.json({ translation: globalCache.translation_ko });
+  }
+
   const translation = await translateJapaneseLine(text);
   const nextCache = { ...cache, [cacheKey]: translation };
   await admin.from("documents").update({ body_line_translations: nextCache }).eq("id", id).eq("user_id", user.id);
+  await admin.from("line_translation_cache").upsert({
+    source_text: text,
+    translation_ko: translation,
+    updated_at: new Date().toISOString(),
+  });
 
   return NextResponse.json({ translation });
 }

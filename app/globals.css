@@ -51,6 +51,11 @@ a { color: inherit; text-decoration: none; }
   animation: brand-wiggle-once 0.95s ease-out 0.2s 1 both;
 }
 
+.vocab-card-flash {
+  background: #fff1cf;
+  box-shadow: 0 0 0 2px rgba(223, 91, 63, 0.22);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .brand-logo-wiggle {
     animation: none;
