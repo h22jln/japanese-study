@@ -1,4 +1,4 @@
-import { BookOpen, FileText, Sparkles } from "lucide-react";
+import { BookOpen, Brain, FileText, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { PdfUploadButton } from "@/components/documents/pdf-upload-button";
@@ -54,10 +54,11 @@ export default async function DashboardPage() {
           <PdfUploadButton />
         </header>
 
-        <section className="mt-8 grid grid-cols-1 gap-2 sm:mt-10 sm:grid-cols-3 sm:gap-5">
+        <section className="mt-8 grid grid-cols-1 gap-2 sm:mt-10 sm:grid-cols-4 sm:gap-5">
           <div className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3 sm:p-6"><FileText size={18} /><p className="mt-4 truncate text-[11px] text-[var(--muted)] sm:mt-6 sm:text-sm">업로드 자료</p><strong className="mt-1 block text-2xl sm:text-3xl">{documents.length}</strong></div>
           <Link href="/vocabulary" className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3 transition hover:border-[var(--accent)] sm:p-6"><BookOpen size={18} /><p className="mt-4 truncate text-[11px] text-[var(--muted)] sm:mt-6 sm:text-sm">저장 단어</p><strong className="mt-1 block text-2xl sm:text-3xl">{vocabularyCount}</strong></Link>
           <Link href="/grammar" className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3 transition hover:border-[var(--accent)] sm:p-6"><Sparkles size={18} /><p className="mt-4 truncate text-[11px] text-[var(--muted)] sm:mt-6 sm:text-sm">저장 문법</p><strong className="mt-1 block text-2xl sm:text-3xl">{grammarCount}</strong></Link>
+          <Link href="/quiz" className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3 transition hover:border-[var(--accent)] sm:p-6"><Brain size={18} /><p className="mt-4 truncate text-[11px] text-[var(--muted)] sm:mt-6 sm:text-sm">단어 퀴즈</p><strong className="mt-1 block text-2xl sm:text-3xl">{vocabularyCount}</strong></Link>
         </section>
 
         {documents.length === 0 ? (
