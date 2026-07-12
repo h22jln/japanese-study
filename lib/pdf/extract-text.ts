@@ -8,9 +8,10 @@ const execFileAsync = promisify(execFile);
 
 const PYTHON_CANDIDATES = [
   process.env.PDF_PYTHON_PATH,
+  process.env.PYTHON,
+  "python3",
   "/Users/hjshin/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3",
   "/usr/bin/python3",
-  "python3",
 ].filter((value): value is string => Boolean(value));
 
 async function findPythonExecutable() {
