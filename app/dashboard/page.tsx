@@ -27,11 +27,13 @@ export default async function DashboardPage() {
   let documents: DocumentItem[] = [];
   let vocabularyCount = 0;
   let grammarCount = 0;
-
   // 환경변수 설정 전에는 UI 미리보기를 허용하고, 연결 후에는 인증을 강제합니다.
   if (supabase) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login");
+
+    const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).single();
+    if (profile?.username === "admin") redirect("/admin/users");
 
     const [{ data }, { count }, { count: savedGrammarCount }] = await Promise.all([
       supabase.from("documents").select("id,title,status,created_at,pinned_at").order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),

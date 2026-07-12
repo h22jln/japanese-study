@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { isValidUsername, usernameToAuthEmail } from "@/lib/auth/username";
+import { isValidUsername, usernameToAuthEmails } from "@/lib/auth/username";
 
 export function LoginForm() {
   const [message, setMessage] = useState("");
@@ -27,14 +27,20 @@ export function LoginForm() {
       return setMessage("먼저 .env.local에 Supabase 키를 설정해주세요.");
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: usernameToAuthEmail(username),
-      password,
-    });
+    let signInError: string | null = null;
+    for (const email of usernameToAuthEmails(username)) {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error) {
+        setIsLoading(false);
+        router.replace("/dashboard");
+        router.refresh();
+        return;
+      }
+      signInError = error.message;
+    }
+
     setIsLoading(false);
-    if (error) return setMessage("아이디 또는 비밀번호를 확인해주세요.");
-    router.replace("/dashboard");
-    router.refresh();
+    if (signInError) return setMessage("아이디 또는 비밀번호를 확인해주세요.");
   }
 
   return (
