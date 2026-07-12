@@ -2,21 +2,21 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, FileText, Sparkles } from "lucide-react";
 
 const features = [
-  { icon: FileText, title: "PDF 분석", text: "학습 자료의 핵심 내용을 한국어로 정리합니다." },
-  { icon: Sparkles, title: "단어 자동 추출", text: "사전형, 읽기, 품사와 예문까지 구조화합니다." },
-  { icon: BookOpen, title: "반복 복습", text: "틀린 단어를 중심으로 다시 학습합니다." },
+  { icon: FileText, title: "자료 정리", text: "올린 PDF의 흐름과 핵심 내용을 보기 좋게 산뜻하게 정리합니다." },
+  { icon: Sparkles, title: "단어 자동 추출", text: "복습이 필요한 단어를 쏙 골라 뜻과 읽기를 함께 모아줍니다." },
+  { icon: BookOpen, title: "가벼운 복습", text: "저장한 단어와 문법을 다시 꺼내 보며 부담 없이 이어서 공부합니다." },
 ];
 
 export default function Home() {
   return (
     <main className="min-h-screen overflow-x-hidden px-4 py-5 sm:px-6 md:px-10">
       <nav className="mx-auto flex max-w-6xl items-center justify-between">
-        <Link href="/" className="shrink-0 text-base font-bold tracking-tight sm:text-lg">ことばノート</Link>
+        <Link href="/" className="brand-logo-wiggle shrink-0 text-2xl font-bold tracking-tight sm:text-[2rem]">またね！</Link>
         <div className="flex shrink-0 items-center gap-3">
           <Link href="/login" className="whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium">로그인</Link>
           <Link
             href="/dashboard"
-            className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-full bg-[var(--foreground)] px-5 text-sm font-semibold leading-none text-white shadow-sm"
+            className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-full bg-[var(--accent)] px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-[var(--accent-dark)]"
           >
             시작하기
           </Link>
@@ -25,15 +25,15 @@ export default function Home() {
 
       <section className="mx-auto grid max-w-6xl gap-10 pb-16 pt-16 sm:pt-24 md:grid-cols-[1.15fr_.85fr] md:items-center md:pt-32">
         <div>
-          <p className="mb-4 text-xs font-bold tracking-[.16em] text-[var(--accent)] sm:text-sm">AI JAPANESE REVIEW</p>
+          <p className="mb-4 text-xs font-bold tracking-[.16em] text-[var(--accent)] sm:text-sm">SAVE IT, SEE YOU AGAIN</p>
           <h1 className="max-w-3xl text-4xl font-bold leading-[1.1] tracking-[-.04em] sm:text-5xl md:text-7xl">
-            읽은 자료를<br />기억할 단어로.
+            읽은 자료를<br />다시 반갑게.
           </h1>
           <p className="mt-6 max-w-xl text-base leading-7 text-[var(--muted)] sm:text-lg sm:leading-8">
-            일본어 PDF를 올리면 AI가 핵심 내용을 정리하고, 복습할 단어와 문법을 자동으로 만들어 드립니다.
+            またね！는 일본어 자료를 올려두면, 다시 보고 싶은 단어와 문법을 가볍고 반갑게 꺼내볼 수 있게 정리해주는 복습 노트입니다.
           </p>
           <Link href="/dashboard" className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-6 py-3.5 font-bold text-white hover:bg-[var(--accent-dark)] sm:w-auto">
-            첫 자료 올리기 <ArrowRight size={18} />
+            첫 자료 담아두기 <ArrowRight size={18} />
           </Link>
         </div>
 

@@ -2,7 +2,7 @@
 
 ## 1. 프로젝트 개요
 
-**ことばノート(Kotoba Note)**는 일본어 PDF 학습 자료를 AI로 분석해 한국어 요약, 단어, 문법, 복습 카드를 만드는 서비스입니다.
+**またね！(Matane!)**는 일본어 PDF 학습 자료를 AI로 분석해 한국어 요약, 단어, 문법, 복습 카드를 만드는 서비스입니다.
 
 현재 저장소에는 다음 범위가 구현되어 있습니다.
 
@@ -80,7 +80,7 @@ app/auth/callback/route.ts    → GET /auth/callback
 ```java
 @GetMapping("/api/health")
 public Map<String, Object> health() {
-    return Map.of("ok", true, "service", "nihongo-review");
+    return Map.of("ok", true, "service", "matane");
 }
 ```
 
@@ -89,7 +89,7 @@ Next.js에서는 다음처럼 작성합니다.
 ```ts
 // app/api/health/route.ts
 export function GET() {
-  return Response.json({ ok: true, service: "nihongo-review" });
+  return Response.json({ ok: true, service: "matane" });
 }
 ```
 
@@ -279,7 +279,7 @@ Next.js App Router의 라우트가 위치합니다.
 | `/login` | `app/login/page.tsx` | 이메일 로그인 폼을 표시합니다. |
 | `/dashboard` | `app/dashboard/page.tsx` | 분석 자료, 저장 단어, 연속 학습 통계의 빈 상태를 표시합니다. 현재 실제 데이터는 조회하지 않습니다. |
 | `/auth/callback` | `app/auth/callback/route.ts` | Supabase가 전달한 인증 코드를 세션으로 교환하고 대시보드로 이동시킵니다. |
-| `/api/health` | `app/api/health/route.ts` | `{ ok: true, service: "nihongo-review" }`를 반환합니다. |
+| `/api/health` | `app/api/health/route.ts` | `{ ok: true, service: "matane" }`를 반환합니다. |
 
 `app/layout.tsx`는 모든 페이지를 감싸는 루트 레이아웃이며 서비스 제목과 설명 메타데이터를 선언합니다. `app/globals.css`는 Tailwind를 불러오고 배경색, 글자색, 강조색 등의 CSS 변수를 정의합니다.
 

@@ -40,7 +40,7 @@ export function LoginForm() {
   return (
     <form onSubmit={signIn} className="mt-8 space-y-4">
       <label className="block text-sm font-semibold" htmlFor="username">아이디</label>
-      <input id="username" name="username" required minLength={4} maxLength={20} autoCapitalize="none" autoComplete="username" spellCheck={false} placeholder="kotoba_user" className="w-full rounded-xl border border-[var(--line)] px-4 py-3 outline-none focus:border-[var(--accent)]" />
+      <input id="username" name="username" required minLength={4} maxLength={20} autoCapitalize="none" autoComplete="username" spellCheck={false} placeholder="matane_user" className="w-full rounded-xl border border-[var(--line)] px-4 py-3 outline-none focus:border-[var(--accent)]" />
       <label className="block text-sm font-semibold" htmlFor="password">비밀번호</label>
       <input id="password" name="password" type="password" required autoComplete="current-password" className="w-full rounded-xl border border-[var(--line)] px-4 py-3 outline-none focus:border-[var(--accent)]" />
       <button disabled={isLoading} className="w-full rounded-xl bg-[var(--foreground)] px-4 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">

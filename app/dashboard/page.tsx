@@ -48,7 +48,7 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-6xl">
         <DocumentStatusRefresher active={documents.some((document) => document.status === "processing")} />
         <header className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-          <div><p className="text-sm text-[var(--muted)]">ことばノート</p><h1 className="mt-1 text-2xl font-bold sm:text-3xl">내 학습 자료</h1></div>
+          <div><p className="text-sm text-[var(--muted)]">またね！</p><h1 className="mt-1 text-2xl font-bold sm:text-3xl">내 학습 자료</h1></div>
           <PdfUploadButton />
         </header>
 

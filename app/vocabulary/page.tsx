@@ -40,7 +40,7 @@ export default async function VocabularyPage() {
 
         <header className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-bold text-[var(--accent)]">ことばノート</p>
+            <p className="text-sm font-bold text-[var(--accent)]">またね！</p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">저장한 단어</h1>
           </div>
           <p className="text-sm text-[var(--muted)]">{savedCards.length}개 저장됨</p>
