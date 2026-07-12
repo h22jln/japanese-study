@@ -12,9 +12,14 @@ export default function Home() {
     <main className="min-h-screen overflow-x-hidden px-4 py-5 sm:px-6 md:px-10">
       <nav className="mx-auto flex max-w-6xl items-center justify-between">
         <Link href="/" className="shrink-0 text-base font-bold tracking-tight sm:text-lg">ことばノート</Link>
-        <div className="flex items-center gap-1 sm:gap-3">
-          <Link href="/login" className="rounded-full px-3 py-2 text-sm font-medium sm:px-4">로그인</Link>
-          <Link href="/dashboard" className="rounded-full bg-[var(--foreground)] px-4 py-2.5 text-sm font-semibold text-white sm:px-5">시작</Link>
+        <div className="flex shrink-0 items-center gap-3">
+          <Link href="/login" className="whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium">로그인</Link>
+          <Link
+            href="/dashboard"
+            className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-full bg-[var(--foreground)] px-5 text-sm font-semibold leading-none text-white shadow-sm"
+          >
+            시작하기
+          </Link>
         </div>
       </nav>
 

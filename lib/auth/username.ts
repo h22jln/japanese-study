@@ -9,5 +9,5 @@ export function isValidUsername(value: string) {
 }
 
 export function usernameToAuthEmail(value: string) {
-  return `${normalizeUsername(value)}@users.kotoba.invalid`;
+  return `${normalizeUsername(value)}@users.kotoba.app`;
 }
