@@ -5,6 +5,7 @@ import { PdfUploadButton } from "@/components/documents/pdf-upload-button";
 import { AnalyzeButton } from "@/components/documents/analyze-button";
 import { DocumentStatusRefresher } from "@/components/documents/document-status-refresher";
 import { PinDocumentButton } from "@/components/documents/pin-document-button";
+import { DeleteDocumentButton } from "@/components/documents/delete-document-button";
 import Link from "next/link";
 
 type DocumentItem = {
@@ -77,6 +78,7 @@ export default async function DashboardPage() {
                   </div>
                   <div className="flex shrink-0 items-center justify-between gap-3 pl-[52px] text-left sm:pl-0">
                     <PinDocumentButton documentId={document.id} initialPinned={Boolean(document.pinned_at)} compact />
+                    <DeleteDocumentButton documentId={document.id} compact />
                     <div className="sm:text-right">
                       <span className="inline-block rounded-full bg-[#f1eee7] px-3 py-1.5 text-xs font-semibold text-[var(--muted)]">{statusLabels[document.status]}</span>
                       {(document.status === "queued" || document.status === "failed") && <div className="mt-2"><AnalyzeButton documentId={document.id} /></div>}

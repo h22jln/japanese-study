@@ -7,6 +7,7 @@ import { DocumentStatusRefresher } from "@/components/documents/document-status-
 import { DocumentTitleForm } from "@/components/documents/document-title-form";
 import { HighlightedBody } from "@/components/documents/highlighted-body";
 import { PinDocumentButton } from "@/components/documents/pin-document-button";
+import { DeleteDocumentButton } from "@/components/documents/delete-document-button";
 import { SaveVocabularyButton } from "@/components/vocabulary/save-vocabulary-button";
 import { SaveGrammarButton } from "@/components/grammar/save-grammar-button";
 import { formatPartOfSpeech } from "@/lib/dictionary/format-part-of-speech";
@@ -71,7 +72,8 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
           <div className="min-w-0"><p className="text-sm font-bold text-[var(--accent)]">일본어 학습 자료</p><div className="mt-2"><DocumentTitleForm documentId={document.id} initialTitle={document.title} /></div></div>
           <div className="flex items-center gap-2 self-start">
             <PinDocumentButton documentId={document.id} initialPinned={Boolean(document.pinned_at)} />
-          {(document.status === "queued" || document.status === "failed" || bodyLines.length === 0) && <AnalyzeButton documentId={document.id} />}
+            <DeleteDocumentButton documentId={document.id} redirectTo="/dashboard" />
+            {(document.status === "queued" || document.status === "failed" || bodyLines.length === 0) && <AnalyzeButton documentId={document.id} />}
           </div>
         </header>
 
