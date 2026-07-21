@@ -104,6 +104,7 @@ export function HighlightedBody({
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [deletedVocabularyIds, setDeletedVocabularyIds] = useState<string[]>([]);
   const [deletingVocabularyId, setDeletingVocabularyId] = useState<string | null>(null);
+  const [justSavedKeys, setJustSavedKeys] = useState<string[]>([]);
   const [dictionaryState, setDictionaryState] = useState<{
     loading: boolean;
     error: string;
@@ -347,6 +348,7 @@ export function HighlightedBody({
       return;
     }
 
+    setJustSavedKeys([]);
     setDictionaryState({
       loading: false,
       error: "",
@@ -360,7 +362,7 @@ export function HighlightedBody({
     entryId?: string;
     vocabularyId?: string;
     aiEntry?: { dictionaryForm: string; reading: string; meaningKo: string; partOfSpeech?: string | null };
-  }, key: string) {
+  }, key: string, wasSaved: boolean) {
     setSavingKey(key);
     const response = await fetch("/api/dictionary/save", {
       method: "POST",
@@ -377,6 +379,10 @@ export function HighlightedBody({
     if (!response.ok) {
       setDictionaryState((current) => current ? { ...current, error: result?.error ?? "단어 저장에 실패했습니다." } : current);
       return;
+    }
+
+    if (!wasSaved) {
+      setJustSavedKeys((current) => current.includes(key) ? current : [...current, key]);
     }
 
     if (result?.vocabulary && selectedText.trim()) {
@@ -724,64 +730,75 @@ export function HighlightedBody({
             <p className="mt-4 text-sm text-red-600">{dictionaryState.error}</p>
           ) : (
             <div className="mt-4 space-y-3">
-              {dictionaryState.localVocabulary.map((item, index) => (
-                <div key={`${item.dictionaryForm}-${index}`} className="rounded-2xl bg-[#f7f7f4] p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[var(--accent)]"><BookOpen size={14} /> 내 자료 단어</div>
-                    <button
-                      type="button"
-                      disabled={savingKey === `local-${item.id}`}
-                      onClick={() => saveDictionaryItem({ vocabularyId: item.id }, `local-${item.id}`)}
-                      className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full border border-[var(--line)] bg-white px-2.5 text-[11px] font-bold leading-none text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
-                      aria-label={item.isSaved ? "한 번 더 보기" : "단어장 저장"}
-                      title={item.isSaved ? "재확인 표시" : "단어장 저장"}
-                    >
-                      {item.isSaved ? <BookmarkCheck size={14} className="text-[var(--accent)]" /> : <Bookmark size={14} />}
-                      {item.isSaved && "한 번 더"}
-                    </button>
-                  </div>
-                  <p className="mt-2 font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-lg font-bold leading-snug">{item.dictionaryForm}</p>
-                  <p className="text-sm text-[var(--muted)]">{item.reading}{formatPartOfSpeech(item.partOfSpeech) ? ` · ${formatPartOfSpeech(item.partOfSpeech)}` : ""}</p>
-                  <p className="mt-2 text-sm">{item.meaningKo}</p>
-                </div>
-              ))}
-              {dictionaryState.entries.map((entry) => (
-                <div key={entry.id} className="rounded-2xl border border-[var(--line)] p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-lg font-bold leading-snug">{entry.primarySpelling ?? entry.primaryReading}</p>
-                      <span className="text-sm text-[var(--muted)]">{entry.primaryReading}</span>
-                      {entry.source === "ai" && <span className="rounded-full bg-[#f7f1eb] px-2 py-0.5 text-[10px] font-bold text-[var(--accent)]">AI</span>}
-                      {entry.isCommon && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">common</span>}
+              {dictionaryState.localVocabulary.map((item, index) => {
+                const key = `local-${item.id}`;
+                const showReviewLabel = item.isSaved && !justSavedKeys.includes(key);
+
+                return (
+                  <div key={`${item.dictionaryForm}-${index}`} className="rounded-2xl bg-[#f7f7f4] p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[var(--accent)]"><BookOpen size={14} /> 내 자료 단어</div>
+                      <button
+                        type="button"
+                        disabled={savingKey === key}
+                        onClick={() => saveDictionaryItem({ vocabularyId: item.id }, key, item.isSaved)}
+                        className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full border border-[var(--line)] bg-white px-2.5 text-[11px] font-bold leading-none text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                        aria-label={showReviewLabel ? "한 번 더 보기" : item.isSaved ? "저장됨" : "단어장 저장"}
+                        title={showReviewLabel ? "재확인 표시" : item.isSaved ? "저장됨" : "단어장 저장"}
+                      >
+                        {item.isSaved ? <BookmarkCheck size={14} className="text-[var(--accent)]" /> : <Bookmark size={14} />}
+                        {showReviewLabel && "한 번 더"}
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      disabled={savingKey === `entry-${entry.id}`}
-                      onClick={() => saveDictionaryItem(
-                        entry.source === "ai"
-                          ? {
-                              aiEntry: {
-                                dictionaryForm: entry.primarySpelling ?? entry.primaryReading,
-                                reading: entry.primaryReading,
-                                meaningKo: entry.glosses[0] ?? "",
-                                partOfSpeech: entry.partsOfSpeech[0] ?? null,
-                              },
-                            }
-                          : { entryId: entry.id },
-                        `entry-${entry.id}`,
-                      )}
-                      className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full border border-[var(--line)] bg-white px-2.5 text-[11px] font-bold leading-none text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
-                      aria-label={entry.isSaved ? "한 번 더 보기" : "단어장 저장"}
-                      title={entry.isSaved ? "재확인 표시" : "단어장 저장"}
-                    >
-                      {entry.isSaved ? <BookmarkCheck size={14} className="text-[var(--accent)]" /> : <Bookmark size={14} />}
-                      {entry.isSaved && "한 번 더"}
-                    </button>
+                    <p className="mt-2 font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-lg font-bold leading-snug">{item.dictionaryForm}</p>
+                    <p className="text-sm text-[var(--muted)]">{item.reading}{formatPartOfSpeech(item.partOfSpeech) ? ` · ${formatPartOfSpeech(item.partOfSpeech)}` : ""}</p>
+                    <p className="mt-2 text-sm">{item.meaningKo}</p>
                   </div>
-                  {formatPartOfSpeechList(entry.partsOfSpeech).length > 0 && <p className="mt-2 text-xs text-[var(--muted)]">{formatPartOfSpeechList(entry.partsOfSpeech).join(" · ")}</p>}
-                  {entry.glosses.length > 0 && <p className="mt-2 text-sm leading-6">{entry.glosses.join("; ")}</p>}
-                </div>
-              ))}
+                );
+              })}
+              {dictionaryState.entries.map((entry) => {
+                const key = `entry-${entry.id}`;
+                const showReviewLabel = Boolean(entry.isSaved) && !justSavedKeys.includes(key);
+
+                return (
+                  <div key={entry.id} className="rounded-2xl border border-[var(--line)] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-lg font-bold leading-snug">{entry.primarySpelling ?? entry.primaryReading}</p>
+                        <span className="text-sm text-[var(--muted)]">{entry.primaryReading}</span>
+                        {entry.source === "ai" && <span className="rounded-full bg-[#f7f1eb] px-2 py-0.5 text-[10px] font-bold text-[var(--accent)]">AI</span>}
+                        {entry.isCommon && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">common</span>}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={savingKey === key}
+                        onClick={() => saveDictionaryItem(
+                          entry.source === "ai"
+                            ? {
+                                aiEntry: {
+                                  dictionaryForm: entry.primarySpelling ?? entry.primaryReading,
+                                  reading: entry.primaryReading,
+                                  meaningKo: entry.glosses[0] ?? "",
+                                  partOfSpeech: entry.partsOfSpeech[0] ?? null,
+                                },
+                              }
+                            : { entryId: entry.id },
+                          key,
+                          Boolean(entry.isSaved),
+                        )}
+                        className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full border border-[var(--line)] bg-white px-2.5 text-[11px] font-bold leading-none text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                        aria-label={showReviewLabel ? "한 번 더 보기" : entry.isSaved ? "저장됨" : "단어장 저장"}
+                        title={showReviewLabel ? "재확인 표시" : entry.isSaved ? "저장됨" : "단어장 저장"}
+                      >
+                        {entry.isSaved ? <BookmarkCheck size={14} className="text-[var(--accent)]" /> : <Bookmark size={14} />}
+                        {showReviewLabel && "한 번 더"}
+                      </button>
+                    </div>
+                    {formatPartOfSpeechList(entry.partsOfSpeech).length > 0 && <p className="mt-2 text-xs text-[var(--muted)]">{formatPartOfSpeechList(entry.partsOfSpeech).join(" · ")}</p>}
+                    {entry.glosses.length > 0 && <p className="mt-2 text-sm leading-6">{entry.glosses.join("; ")}</p>}
+                  </div>
+                );
+              })}
               {dictionaryState.localVocabulary.length === 0 && dictionaryState.entries.length === 0 && (
                 <p className="text-sm text-[var(--muted)]">사전 결과가 없습니다.</p>
               )}
