@@ -5,6 +5,11 @@ import type { ReactNode } from "react";
 import { BookOpen, Bookmark, BookmarkCheck, ChevronDown, ChevronUp, Languages, Search, Sparkles, StickyNote, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatPartOfSpeech, formatPartOfSpeechList } from "@/lib/dictionary/format-part-of-speech";
+import {
+  defaultAnalysisHighlightColor,
+  defaultLookupHighlightColor,
+  getHighlightColorOption,
+} from "@/lib/user-highlight-colors";
 
 type HighlightWord = {
   surface_form: string | null;
@@ -48,6 +53,8 @@ export function HighlightedBody({
   initialTranslations,
   initialSummary,
   initialNotes,
+  analysisHighlightColor,
+  lookupHighlightColor,
 }: {
   documentId: string;
   words: HighlightWord[];
@@ -55,6 +62,8 @@ export function HighlightedBody({
   initialTranslations?: Record<string, string> | null;
   initialSummary?: string | null;
   initialNotes?: DocumentNote[];
+  analysisHighlightColor?: string | null;
+  lookupHighlightColor?: string | null;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
@@ -420,8 +429,8 @@ export function HighlightedBody({
         return <span key={`${keyPrefix}-deleted-${index}`}>{part}</span>;
       }
       const highlightClass = word.source === "user_lookup"
-        ? "bg-[#c9f4e5]/80 hover:bg-[#9ce8cc] focus:bg-[#9ce8cc]"
-        : "bg-[#ffe8a3]/70 hover:bg-[#ffd866] focus:bg-[#ffd866]";
+        ? getHighlightColorOption(lookupHighlightColor, defaultLookupHighlightColor).className
+        : getHighlightColorOption(analysisHighlightColor, defaultAnalysisHighlightColor).className;
 
       return (
         <span

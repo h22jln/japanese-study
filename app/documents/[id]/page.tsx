@@ -11,6 +11,7 @@ import { DeleteDocumentButton } from "@/components/documents/delete-document-but
 import { SaveVocabularyButton } from "@/components/vocabulary/save-vocabulary-button";
 import { SaveGrammarButton } from "@/components/grammar/save-grammar-button";
 import { formatPartOfSpeech } from "@/lib/dictionary/format-part-of-speech";
+import { defaultAnalysisHighlightColor, defaultLookupHighlightColor } from "@/lib/user-highlight-colors";
 
 type VocabularyLink = {
   surface_form: string | null;
@@ -82,12 +83,13 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: document }, { data: grammarPoints }, { data: savedCards }, { data: savedGrammarPoints }, { data: notes }] = await Promise.all([
+  const [{ data: document }, { data: grammarPoints }, { data: savedCards }, { data: savedGrammarPoints }, { data: notes }, { data: profile }] = await Promise.all([
     supabase.from("documents").select("id,title,status,body_lines,body_line_translations,summary_ko,error_message,created_at,pinned_at").eq("id", id).single(),
     supabase.from("grammar_points").select("id,pattern,meaning_ko,explanation_ko,example_ja,example_ko").eq("document_id", id).order("created_at"),
     supabase.from("review_cards").select("vocabulary_id"),
     supabase.from("saved_grammar_points").select("grammar_point_id"),
     supabase.from("document_notes").select("id,line_index,selected_text,note_text,start_offset,end_offset,created_at,updated_at").eq("document_id", id).order("line_index").order("created_at"),
+    supabase.from("profiles").select("analysis_highlight_color,lookup_highlight_color").eq("id", user.id).single(),
   ]);
   if (!document) notFound();
 
@@ -172,7 +174,18 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
                 <div className="flex items-center gap-2"><FileText size={19} className="text-[var(--accent)]" /><h2 className="font-bold">본문</h2></div>
                 <p className="mt-2 text-xs text-[var(--muted)]">표시된 단어에 마우스를 올리거나 선택하면 뜻을 볼 수 있고, 각 줄의 해석은 버튼을 눌렀을 때만 열립니다.</p>
                 <div className="mt-8">
-                  {bodyLines.length > 0 ? <HighlightedBody documentId={document.id} words={vocabularyWords} lines={bodyLines} initialTranslations={cachedTranslations} initialSummary={document.summary_ko} initialNotes={documentNotes} /> : <div className="rounded-2xl bg-[#f7f7f4] p-6 text-center text-sm text-[var(--muted)]">이 자료에는 추출된 본문이 없습니다. 상단의 AI 분석 버튼으로 다시 분석해주세요.</div>}
+                  {bodyLines.length > 0 ? (
+                    <HighlightedBody
+                      documentId={document.id}
+                      words={vocabularyWords}
+                      lines={bodyLines}
+                      initialTranslations={cachedTranslations}
+                      initialSummary={document.summary_ko}
+                      initialNotes={documentNotes}
+                      analysisHighlightColor={profile?.analysis_highlight_color ?? defaultAnalysisHighlightColor}
+                      lookupHighlightColor={profile?.lookup_highlight_color ?? defaultLookupHighlightColor}
+                    />
+                  ) : <div className="rounded-2xl bg-[#f7f7f4] p-6 text-center text-sm text-[var(--muted)]">이 자료에는 추출된 본문이 없습니다. 상단의 AI 분석 버튼으로 다시 분석해주세요.</div>}
                 </div>
               </section>
 

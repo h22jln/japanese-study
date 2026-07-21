@@ -1,4 +1,4 @@
-import { BookOpen, Brain, FileText, Sparkles } from "lucide-react";
+import { BookOpen, Brain, FileText, Palette, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { PdfUploadButton } from "@/components/documents/pdf-upload-button";
@@ -52,7 +52,12 @@ export default async function DashboardPage() {
         <DocumentStatusRefresher active={documents.some((document) => document.status === "processing")} />
         <header className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div><p className="text-sm text-[var(--muted)]">またね！</p><h1 className="mt-1 text-2xl font-bold sm:text-3xl">내 학습 자료</h1></div>
-          <PdfUploadButton />
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/settings" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[var(--line)] bg-white px-4 text-sm font-bold transition hover:border-[var(--accent)] hover:text-[var(--accent)]">
+              <Palette size={16} /> 설정
+            </Link>
+            <PdfUploadButton />
+          </div>
         </header>
 
         <section className="mt-8 grid grid-cols-1 gap-2 sm:mt-10 sm:grid-cols-4 sm:gap-5">
