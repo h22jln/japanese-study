@@ -58,8 +58,9 @@ export function HighlightedBody({
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
+  const [extraWords, setExtraWords] = useState<HighlightWord[]>([]);
   const lookup = new Map<string, HighlightWord>();
-  for (const word of words) {
+  for (const word of [...words, ...extraWords]) {
     if (word.surface_form?.trim()) lookup.set(word.surface_form.trim(), word);
     if (word.vocabulary.dictionary_form.trim()) lookup.set(word.vocabulary.dictionary_form.trim(), word);
   }
@@ -361,6 +362,27 @@ export function HighlightedBody({
     if (!response.ok) {
       setDictionaryState((current) => current ? { ...current, error: result?.error ?? "단어 저장에 실패했습니다." } : current);
       return;
+    }
+
+    if (result?.vocabulary && selectedText.trim()) {
+      setExtraWords((current) => {
+        if (current.some((word) => word.surface_form === selectedText && word.vocabulary.id === result.vocabulary.id)) return current;
+        return [
+          ...current,
+          {
+            surface_form: selectedText,
+            source: "user_lookup",
+            vocabulary: {
+              id: result.vocabulary.id,
+              dictionary_form: result.vocabulary.dictionaryForm,
+              reading: result.vocabulary.reading,
+              meaning_ko: result.vocabulary.meaningKo,
+              part_of_speech: result.vocabulary.partOfSpeech,
+            },
+          },
+        ];
+      });
+      setDeletedVocabularyIds((current) => current.filter((id) => id !== result.vocabulary.id));
     }
 
     router.refresh();

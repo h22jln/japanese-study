@@ -150,5 +150,23 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, vocabularyId });
+  const { data: savedVocabulary } = await admin
+    .from("vocabulary")
+    .select("id,dictionary_form,reading,meaning_ko,part_of_speech")
+    .eq("id", vocabularyId)
+    .eq("user_id", user.id)
+    .single();
+
+  return NextResponse.json({
+    ok: true,
+    vocabularyId,
+    vocabulary: savedVocabulary ? {
+      id: savedVocabulary.id,
+      dictionaryForm: savedVocabulary.dictionary_form,
+      reading: savedVocabulary.reading,
+      meaningKo: savedVocabulary.meaning_ko,
+      partOfSpeech: savedVocabulary.part_of_speech,
+      surfaceForm: surfaceForm || savedVocabulary.dictionary_form,
+    } : null,
+  });
 }
