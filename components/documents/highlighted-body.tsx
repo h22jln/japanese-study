@@ -721,12 +721,14 @@ export function HighlightedBody({
                     <div className="flex items-center gap-2 text-xs font-bold text-[var(--accent)]"><BookOpen size={14} /> 내 자료 단어</div>
                     <button
                       type="button"
-                      disabled={item.isSaved || savingKey === `local-${item.id}`}
+                      disabled={savingKey === `local-${item.id}`}
                       onClick={() => saveDictionaryItem({ vocabularyId: item.id }, `local-${item.id}`)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] bg-white text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
-                      aria-label={item.isSaved ? "저장됨" : "단어장 저장"}
+                      className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-[var(--line)] bg-white px-2.5 text-xs font-bold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                      aria-label={item.isSaved ? "한 번 더 보기" : "단어장 저장"}
+                      title={item.isSaved ? "헷갈림 표시" : "단어장 저장"}
                     >
                       {item.isSaved ? <BookmarkCheck size={15} className="text-[var(--accent)]" /> : <Bookmark size={15} />}
+                      {item.isSaved && "한 번 더"}
                     </button>
                   </div>
                   <p className="mt-2 font-bold">{item.dictionaryForm}</p>
@@ -745,7 +747,7 @@ export function HighlightedBody({
                     </div>
                     <button
                       type="button"
-                      disabled={entry.isSaved || savingKey === `entry-${entry.id}`}
+                      disabled={savingKey === `entry-${entry.id}`}
                       onClick={() => saveDictionaryItem(
                         entry.source === "ai"
                           ? {
@@ -759,10 +761,12 @@ export function HighlightedBody({
                           : { entryId: entry.id },
                         `entry-${entry.id}`,
                       )}
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-white text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
-                      aria-label={entry.isSaved ? "저장됨" : "단어장 저장"}
+                      className="inline-flex min-h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[var(--line)] bg-white px-2.5 text-xs font-bold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                      aria-label={entry.isSaved ? "한 번 더 보기" : "단어장 저장"}
+                      title={entry.isSaved ? "헷갈림 표시" : "단어장 저장"}
                     >
                       {entry.isSaved ? <BookmarkCheck size={15} className="text-[var(--accent)]" /> : <Bookmark size={15} />}
+                      {entry.isSaved && "한 번 더"}
                     </button>
                   </div>
                   {formatPartOfSpeechList(entry.partsOfSpeech).length > 0 && <p className="mt-2 text-xs text-[var(--muted)]">{formatPartOfSpeechList(entry.partsOfSpeech).join(" · ")}</p>}
