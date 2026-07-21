@@ -197,6 +197,12 @@ export function HighlightedBody({
     setSummaryOpen(true);
   }
 
+  function closeAllStudyPanels() {
+    setOpenIndexes([]);
+    setSummaryOpen(false);
+    setToolError("");
+  }
+
   function clearSelectionLookup() {
     setSelectedText("");
     setSelectedLineIndex(null);
@@ -556,6 +562,15 @@ export function HighlightedBody({
           >
             <Sparkles size={14} /> {isSummarizing ? "요약 중" : summaryOpen ? "요약 닫기" : "내용 요약"}
           </button>
+          {(openIndexes.length > 0 || summaryOpen) && (
+            <button
+              type="button"
+              onClick={closeAllStudyPanels}
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[var(--line)] bg-white px-3 text-xs font-bold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              <ChevronUp size={14} /> 전체 닫기
+            </button>
+          )}
         </div>
         {toolError && <p className="break-words text-xs text-red-600">{toolError}</p>}
       </div>
