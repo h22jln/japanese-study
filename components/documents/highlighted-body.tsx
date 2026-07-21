@@ -1,7 +1,8 @@
 "use client";
 
 import { MouseEvent, useEffect, useRef, useState } from "react";
-import { BookOpen, Bookmark, BookmarkCheck, ChevronDown, ChevronUp, Languages, Search, Sparkles, X } from "lucide-react";
+import type { ReactNode } from "react";
+import { BookOpen, Bookmark, BookmarkCheck, ChevronDown, ChevronUp, Languages, Search, Sparkles, StickyNote, Trash2, X } from "lucide-react";
 import { formatPartOfSpeech, formatPartOfSpeechList } from "@/lib/dictionary/format-part-of-speech";
 
 type HighlightWord = {
@@ -19,6 +20,17 @@ type BodyLine = {
   japanese: string;
 };
 
+type DocumentNote = {
+  id: string;
+  line_index: number;
+  selected_text: string;
+  note_text: string;
+  start_offset: number | null;
+  end_offset: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -33,12 +45,14 @@ export function HighlightedBody({
   lines,
   initialTranslations,
   initialSummary,
+  initialNotes,
 }: {
   documentId: string;
   words: HighlightWord[];
   lines?: Array<string | BodyLine> | null;
   initialTranslations?: Record<string, string> | null;
   initialSummary?: string | null;
+  initialNotes?: DocumentNote[];
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const lookup = new Map<string, HighlightWord>();
@@ -65,7 +79,16 @@ export function HighlightedBody({
   const [summary, setSummary] = useState(initialSummary?.trim() ?? "");
   const [summaryOpen, setSummaryOpen] = useState(Boolean(initialSummary?.trim()));
   const [selectedText, setSelectedText] = useState("");
+  const [selectedLineIndex, setSelectedLineIndex] = useState<number | null>(null);
+  const [selectedStartOffset, setSelectedStartOffset] = useState<number | null>(null);
+  const [selectedEndOffset, setSelectedEndOffset] = useState<number | null>(null);
   const [selectionButton, setSelectionButton] = useState<{ top: number; left: number } | null>(null);
+  const [notes, setNotes] = useState<DocumentNote[]>(initialNotes ?? []);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteComposerOpen, setNoteComposerOpen] = useState(false);
+  const [noteError, setNoteError] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [dictionaryState, setDictionaryState] = useState<{
     loading: boolean;
     error: string;
@@ -170,14 +193,20 @@ export function HighlightedBody({
 
   function clearSelectionLookup() {
     setSelectedText("");
+    setSelectedLineIndex(null);
+    setSelectedStartOffset(null);
+    setSelectedEndOffset(null);
     setSelectionButton(null);
     setDictionaryState(null);
+    setNoteComposerOpen(false);
+    setNoteDraft("");
+    setNoteError("");
   }
 
   function captureSelection() {
     const selection = window.getSelection();
     const value = selection?.toString().trim() ?? "";
-    if (!selection || !value || value.length > 40 || selection.rangeCount === 0) {
+    if (!selection || !value || value.length > 200 || selection.rangeCount === 0) {
       setSelectionButton(null);
       return;
     }
@@ -199,11 +228,75 @@ export function HighlightedBody({
       return;
     }
 
+    const element = anchorNode.nodeType === Node.ELEMENT_NODE ? anchorNode as Element : anchorNode.parentElement;
+    const lineElement = element?.closest<HTMLElement>("[data-line-index]");
+    const lineIndex = Number(lineElement?.dataset.lineIndex);
+    const lineText = Number.isInteger(lineIndex) ? displayLines[lineIndex] : "";
+    const startOffset = lineText ? lineText.indexOf(value) : -1;
+
     setSelectedText(value);
+    setSelectedLineIndex(Number.isInteger(lineIndex) ? lineIndex : null);
+    setSelectedStartOffset(startOffset >= 0 ? startOffset : null);
+    setSelectedEndOffset(startOffset >= 0 ? startOffset + value.length : null);
     setSelectionButton({
       top: Math.min(rect.bottom + 8, window.innerHeight - 48),
       left: Math.min(rect.left, window.innerWidth - 44),
     });
+  }
+
+  function openNoteComposer(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    if (!selectedText || selectedLineIndex === null) return;
+    setDictionaryState(null);
+    setNoteComposerOpen(true);
+    setSelectionButton(null);
+    setNoteError("");
+  }
+
+  async function saveNote() {
+    if (!selectedText || selectedLineIndex === null || savingNote) return;
+    const noteText = noteDraft.trim();
+    if (!noteText) {
+      setNoteError("메모 내용을 입력해주세요.");
+      return;
+    }
+
+    setSavingNote(true);
+    setNoteError("");
+    const response = await fetch(`/api/documents/${documentId}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lineIndex: selectedLineIndex,
+        selectedText,
+        noteText,
+        startOffset: selectedStartOffset,
+        endOffset: selectedEndOffset,
+      }),
+    });
+    const payload = await response.json().catch(() => null);
+    setSavingNote(false);
+
+    if (!response.ok) {
+      setNoteError(payload?.error ?? "메모 저장에 실패했습니다.");
+      return;
+    }
+
+    setNotes((current) => [...current, payload.note]);
+    clearSelectionLookup();
+  }
+
+  async function deleteNote(noteId: string) {
+    if (deletingNoteId) return;
+    setDeletingNoteId(noteId);
+    const response = await fetch(`/api/documents/${documentId}/notes`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ noteId }),
+    });
+    setDeletingNoteId(null);
+    if (!response.ok) return;
+    setNotes((current) => current.filter((note) => note.id !== noteId));
   }
 
   async function searchSelectedText(event: MouseEvent<HTMLButtonElement>) {
@@ -266,6 +359,78 @@ export function HighlightedBody({
     }) : current);
   }
 
+  function renderTextWithVocabulary(text: string, keyPrefix: string) {
+    return (matcher ? text.split(matcher) : [text]).map((part, index) => {
+      const word = lookup.get(part);
+      if (!word) return <span key={`${keyPrefix}-text-${index}`}>{part}</span>;
+      return (
+        <span
+          key={`${keyPrefix}-word-${index}`}
+          tabIndex={0}
+          role="button"
+          onClick={() => focusVocabularyCard(word.vocabulary.id)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              focusVocabularyCard(word.vocabulary.id);
+            }
+          }}
+          className="group relative inline cursor-pointer rounded bg-[#ffe8a3]/70 px-0.5 outline-none transition hover:bg-[#ffd866] focus:bg-[#ffd866]"
+        >
+          {part}
+          <span role="tooltip" className="pointer-events-none absolute bottom-[calc(100%+.45rem)] left-0 z-30 hidden w-56 rounded-xl bg-[#20201d] p-3 text-left text-sm leading-5 tracking-normal text-white shadow-xl group-hover:block group-focus:block">
+            <strong className="block text-base">{word.vocabulary.dictionary_form}</strong>
+            <span className="mt-1 block text-white/65">{word.vocabulary.reading}{formatPartOfSpeech(word.vocabulary.part_of_speech) ? ` · ${formatPartOfSpeech(word.vocabulary.part_of_speech)}` : ""}</span>
+            <span className="mt-2 block">{word.vocabulary.meaning_ko}</span>
+          </span>
+        </span>
+      );
+    });
+  }
+
+  function renderLineText(line: string, lineIndex: number) {
+    const lineNotes = notes
+      .filter((note) => note.line_index === lineIndex)
+      .map((note) => {
+        const start = typeof note.start_offset === "number" && note.start_offset >= 0
+          ? note.start_offset
+          : line.indexOf(note.selected_text);
+        const end = typeof note.end_offset === "number" && note.end_offset > start
+          ? note.end_offset
+          : start + note.selected_text.length;
+        return { ...note, start, end };
+      })
+      .filter((note) => note.start >= 0 && note.end > note.start)
+      .sort((a, b) => a.start - b.start);
+
+    const parts: ReactNode[] = [];
+    let cursor = 0;
+
+    for (const note of lineNotes) {
+      if (note.start < cursor) continue;
+      if (note.start > cursor) {
+        parts.push(...renderTextWithVocabulary(line.slice(cursor, note.start), `line-${lineIndex}-${cursor}`));
+      }
+
+      parts.push(
+        <span key={`note-${note.id}`} className="group/note relative rounded bg-[#d9f6ee] px-0.5 ring-1 ring-[#a9e5d3]">
+          {line.slice(note.start, note.end)}
+          <span role="tooltip" className="pointer-events-none absolute bottom-[calc(100%+.45rem)] left-0 z-30 hidden w-64 rounded-xl bg-[#20201d] p-3 text-left text-sm leading-5 tracking-normal text-white shadow-xl group-hover/note:block">
+            <strong className="block text-xs text-white/55">메모</strong>
+            <span className="mt-1 block whitespace-pre-wrap">{note.note_text}</span>
+          </span>
+        </span>,
+      );
+      cursor = note.end;
+    }
+
+    if (cursor < line.length) {
+      parts.push(...renderTextWithVocabulary(line.slice(cursor), `line-${lineIndex}-${cursor}`));
+    }
+
+    return parts;
+  }
+
   useEffect(() => {
     function handlePointerUp() {
       window.setTimeout(captureSelection, 10);
@@ -285,6 +450,8 @@ export function HighlightedBody({
       document.removeEventListener("touchend", handlePointerUp);
       document.removeEventListener("pointerdown", handlePointerDown);
     };
+    // The document listeners should be rebound only when popover visibility changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectionButton, dictionaryState]);
 
   return (
@@ -320,35 +487,10 @@ export function HighlightedBody({
         const isLoading = loadingIndexes.includes(lineIndex);
 
         return (
-          <article key={`${line}-${lineIndex}`} className="min-w-0">
+          <article key={`${line}-${lineIndex}`} data-line-index={lineIndex} className="min-w-0">
             <div className="flex items-start gap-3">
               <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
-                {(matcher ? line.split(matcher) : [line]).map((part, index) => {
-                  const word = lookup.get(part);
-                  if (!word) return <span key={index}>{part}</span>;
-                  return (
-                    <span
-                      key={index}
-                      tabIndex={0}
-                      role="button"
-                      onClick={() => focusVocabularyCard(word.vocabulary.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          focusVocabularyCard(word.vocabulary.id);
-                        }
-                      }}
-                      className="group relative inline cursor-pointer rounded bg-[#ffe8a3]/70 px-0.5 outline-none transition hover:bg-[#ffd866] focus:bg-[#ffd866]"
-                    >
-                      {part}
-                      <span role="tooltip" className="pointer-events-none absolute bottom-[calc(100%+.45rem)] left-0 z-30 hidden w-56 rounded-xl bg-[#20201d] p-3 text-left text-sm leading-5 tracking-normal text-white shadow-xl group-hover:block group-focus:block">
-                        <strong className="block text-base">{word.vocabulary.dictionary_form}</strong>
-                        <span className="mt-1 block text-white/65">{word.vocabulary.reading}{formatPartOfSpeech(word.vocabulary.part_of_speech) ? ` · ${formatPartOfSpeech(word.vocabulary.part_of_speech)}` : ""}</span>
-                        <span className="mt-2 block">{word.vocabulary.meaning_ko}</span>
-                      </span>
-                    </span>
-                  );
-                })}
+                {renderLineText(line, lineIndex)}
               </p>
               <button
                 type="button"
@@ -369,16 +511,89 @@ export function HighlightedBody({
         );
       })}
       {selectionButton && selectedText && (
-        <button
-          type="button"
-          onClick={searchSelectedText}
-          className="fixed z-40 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--foreground)] text-white shadow-lg transition hover:scale-105"
+        <div
+          className="fixed z-40 inline-flex overflow-hidden rounded-full bg-[var(--foreground)] text-white shadow-lg"
           style={{ top: selectionButton.top, left: selectionButton.left }}
-          aria-label="선택한 단어 사전 검색"
-          title="사전 검색"
         >
-          <Search size={16} />
-        </button>
+          <button
+            type="button"
+            onClick={searchSelectedText}
+            className="inline-flex h-9 w-9 items-center justify-center transition hover:bg-white/15"
+            aria-label="선택한 단어 사전 검색"
+            title="사전 검색"
+          >
+            <Search size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={openNoteComposer}
+            className="inline-flex h-9 w-9 items-center justify-center border-l border-white/15 transition hover:bg-white/15"
+            aria-label="선택한 부분에 메모"
+            title="메모"
+          >
+            <StickyNote size={16} />
+          </button>
+        </div>
+      )}
+      {noteComposerOpen && (
+        <aside className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-md rounded-3xl border border-[var(--line)] bg-white p-4 text-sm leading-6 tracking-normal shadow-2xl sm:left-auto sm:right-6 sm:mx-0 sm:w-[24rem]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-[var(--accent)]">선택 메모</p>
+              <p className="mt-1 line-clamp-2 break-words font-bold">{selectedText}</p>
+            </div>
+            <button
+              type="button"
+              onClick={clearSelectionLookup}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--muted)] transition hover:bg-[#f3f3ef] hover:text-[var(--foreground)]"
+              aria-label="메모 닫기"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <textarea
+            value={noteDraft}
+            onChange={(event) => setNoteDraft(event.target.value)}
+            className="mt-4 min-h-28 w-full resize-y rounded-2xl border border-[var(--line)] bg-[#f7f7f4] p-3 text-sm outline-none transition focus:border-[var(--accent)]"
+            placeholder="여기에 메모를 적어두세요."
+          />
+          {noteError && <p className="mt-2 text-xs text-red-600">{noteError}</p>}
+          <div className="mt-3 flex justify-end gap-2">
+            <button type="button" onClick={clearSelectionLookup} className="rounded-full px-4 py-2 text-xs font-bold text-[var(--muted)] hover:bg-[#f3f3ef]">취소</button>
+            <button type="button" onClick={saveNote} disabled={savingNote} className="rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-bold text-white hover:bg-[var(--accent-dark)] disabled:cursor-not-allowed disabled:opacity-60">{savingNote ? "저장 중" : "저장"}</button>
+          </div>
+        </aside>
+      )}
+      {notes.length > 0 && (
+        <section className="rounded-2xl border border-[var(--line)] bg-white p-4 text-sm leading-6 tracking-normal">
+          <div className="flex items-center gap-2">
+            <StickyNote size={16} className="text-[var(--accent)]" />
+            <h3 className="font-bold">내 메모</h3>
+            <span className="text-xs text-[var(--muted)]">{notes.length}개</span>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {notes.map((note) => (
+              <article key={note.id} className="rounded-xl bg-[#f7f7f4] p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="break-words text-xs font-bold text-[var(--accent)]">{note.selected_text}</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-[var(--muted)]">{note.note_text}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => deleteNote(note.id)}
+                    disabled={deletingNoteId === note.id}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label="메모 삭제"
+                    title="메모 삭제"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       )}
       {dictionaryState && (
         <aside className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-md rounded-3xl border border-[var(--line)] bg-white p-4 shadow-2xl sm:left-auto sm:right-6 sm:mx-0 sm:w-[24rem]">
