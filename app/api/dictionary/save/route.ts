@@ -6,6 +6,8 @@ import { formatPartOfSpeech } from "@/lib/dictionary/format-part-of-speech";
 type SavePayload = {
   entryId?: string;
   vocabularyId?: string;
+  documentId?: string;
+  surfaceForm?: string;
   aiEntry?: {
     dictionaryForm: string;
     reading: string;
@@ -88,10 +90,52 @@ export async function POST(request: Request) {
 
   if (!vocabularyId) return NextResponse.json({ error: "저장할 단어가 없습니다." }, { status: 400 });
 
-  const { error } = await admin
+  const { data: existingCard } = await admin
     .from("review_cards")
-    .upsert({ user_id: user.id, vocabulary_id: vocabularyId }, { onConflict: "user_id,vocabulary_id" });
+    .select("id,confusion_count")
+    .eq("user_id", user.id)
+    .eq("vocabulary_id", vocabularyId)
+    .maybeSingle();
+
+  const { error } = existingCard
+    ? await admin
+        .from("review_cards")
+        .update({
+          confusion_count: (existingCard.confusion_count ?? 0) + 1,
+          last_confused_at: new Date().toISOString(),
+        })
+        .eq("id", existingCard.id)
+        .eq("user_id", user.id)
+    : await admin
+        .from("review_cards")
+        .insert({ user_id: user.id, vocabulary_id: vocabularyId });
 
   if (error) return NextResponse.json({ error: "단어장 저장에 실패했습니다." }, { status: 500 });
+
+  const documentId = payload?.documentId?.trim();
+  const surfaceForm = payload?.surfaceForm?.trim().slice(0, 200);
+  if (documentId && surfaceForm) {
+    const { data: document } = await admin
+      .from("documents")
+      .select("id")
+      .eq("id", documentId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (document) {
+      await admin
+        .from("document_vocabulary")
+        .upsert({
+          document_id: documentId,
+          vocabulary_id: vocabularyId,
+          surface_form: surfaceForm,
+          example_ja: null,
+          example_ko: null,
+          source_page: null,
+          source: "user_lookup",
+        }, { onConflict: "document_id,vocabulary_id", ignoreDuplicates: true });
+    }
+  }
+
   return NextResponse.json({ ok: true, vocabularyId });
 }

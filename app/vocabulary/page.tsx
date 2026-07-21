@@ -9,6 +9,8 @@ type SavedCard = {
   id: string;
   vocabulary_id: string;
   saved_at: string | null;
+  confusion_count: number | null;
+  last_confused_at: string | null;
   vocabulary: {
     id: string;
     dictionary_form: string;
@@ -45,7 +47,8 @@ export default async function VocabularyPage() {
 
   const { data: cards } = await supabase
     .from("review_cards")
-    .select("id,vocabulary_id,saved_at,vocabulary(id,dictionary_form,reading,meaning_ko,part_of_speech,jlpt_level)")
+    .select("id,vocabulary_id,saved_at,confusion_count,last_confused_at,vocabulary(id,dictionary_form,reading,meaning_ko,part_of_speech,jlpt_level)")
+    .order("confusion_count", { ascending: false })
     .order("saved_at", { ascending: false });
 
   const savedCards = (cards ?? []) as unknown as SavedCard[];
@@ -94,9 +97,11 @@ export default async function VocabularyPage() {
                                 <div className="flex flex-wrap items-center gap-2">
                                   <h3 className="break-words text-xl font-bold">{card.vocabulary.dictionary_form}</h3>
                                   {card.vocabulary.jlpt_level && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">{card.vocabulary.jlpt_level}</span>}
+                                  {(card.confusion_count ?? 0) > 0 && <span className="rounded-full bg-[#fff0cc] px-2 py-0.5 text-[10px] font-bold text-[#9a5b00]">헷갈림 {card.confusion_count}</span>}
                                 </div>
                                 <p className="mt-1 break-words text-sm text-[var(--muted)]">{card.vocabulary.reading}{partOfSpeech ? ` · ${partOfSpeech}` : ""}</p>
                                 <p className="mt-3 text-base font-semibold">{card.vocabulary.meaning_ko}</p>
+                                {card.last_confused_at && <p className="mt-2 text-xs text-[var(--muted)]">최근 헷갈림 {new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(new Date(card.last_confused_at))}</p>}
                               </>
                             );
                           })()}

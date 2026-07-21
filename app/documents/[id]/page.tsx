@@ -17,6 +17,7 @@ type VocabularyLink = {
   example_ja: string | null;
   example_ko: string | null;
   source_page: number | null;
+  source: "analysis" | "user_lookup" | null;
   vocabulary: {
     id: string;
     dictionary_form: string;
@@ -83,7 +84,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
 
   const [{ data: document }, { data: words }, { data: grammarPoints }, { data: savedCards }, { data: savedGrammarPoints }, { data: notes }] = await Promise.all([
     supabase.from("documents").select("id,title,status,body_lines,body_line_translations,summary_ko,error_message,created_at,pinned_at").eq("id", id).single(),
-    supabase.from("document_vocabulary").select("surface_form,example_ja,example_ko,source_page,vocabulary(id,dictionary_form,reading,meaning_ko,part_of_speech,jlpt_level)").eq("document_id", id),
+    supabase.from("document_vocabulary").select("surface_form,example_ja,example_ko,source_page,source,vocabulary(id,dictionary_form,reading,meaning_ko,part_of_speech,jlpt_level)").eq("document_id", id),
     supabase.from("grammar_points").select("id,pattern,meaning_ko,explanation_ko,example_ja,example_ko").eq("document_id", id).order("created_at"),
     supabase.from("review_cards").select("vocabulary_id"),
     supabase.from("saved_grammar_points").select("grammar_point_id"),

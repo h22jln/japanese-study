@@ -3,10 +3,12 @@
 import { MouseEvent, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { BookOpen, Bookmark, BookmarkCheck, ChevronDown, ChevronUp, Languages, Search, Sparkles, StickyNote, Trash2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { formatPartOfSpeech, formatPartOfSpeechList } from "@/lib/dictionary/format-part-of-speech";
 
 type HighlightWord = {
   surface_form: string | null;
+  source?: "analysis" | "user_lookup" | null;
   vocabulary: {
     id: string;
     dictionary_form: string;
@@ -55,6 +57,7 @@ export function HighlightedBody({
   initialNotes?: DocumentNote[];
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
   const lookup = new Map<string, HighlightWord>();
   for (const word of words) {
     if (word.surface_form?.trim()) lookup.set(word.surface_form.trim(), word);
@@ -330,7 +333,11 @@ export function HighlightedBody({
     const response = await fetch("/api/dictionary/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        documentId,
+        surfaceForm: selectedText,
+      }),
     });
     const result = await response.json().catch(() => null);
     setSavingKey(null);
@@ -339,6 +346,8 @@ export function HighlightedBody({
       setDictionaryState((current) => current ? { ...current, error: result?.error ?? "단어 저장에 실패했습니다." } : current);
       return;
     }
+
+    router.refresh();
 
     setDictionaryState((current) => current ? ({
       ...current,
@@ -363,6 +372,10 @@ export function HighlightedBody({
     return (matcher ? text.split(matcher) : [text]).map((part, index) => {
       const word = lookup.get(part);
       if (!word) return <span key={`${keyPrefix}-text-${index}`}>{part}</span>;
+      const highlightClass = word.source === "user_lookup"
+        ? "bg-[#c9f4e5]/80 hover:bg-[#9ce8cc] focus:bg-[#9ce8cc]"
+        : "bg-[#ffe8a3]/70 hover:bg-[#ffd866] focus:bg-[#ffd866]";
+
       return (
         <span
           key={`${keyPrefix}-word-${index}`}
@@ -375,7 +388,7 @@ export function HighlightedBody({
               focusVocabularyCard(word.vocabulary.id);
             }
           }}
-          className="group relative inline cursor-pointer rounded bg-[#ffe8a3]/70 px-0.5 outline-none transition hover:bg-[#ffd866] focus:bg-[#ffd866]"
+          className={`group relative inline cursor-pointer rounded px-0.5 outline-none transition ${highlightClass}`}
         >
           {part}
           <span role="tooltip" className="pointer-events-none absolute bottom-[calc(100%+.45rem)] left-0 z-30 hidden w-56 rounded-xl bg-[#20201d] p-3 text-left text-sm leading-5 tracking-normal text-white shadow-xl group-hover:block group-focus:block">

@@ -9,6 +9,7 @@ type QuizWord = {
   meaningKo: string;
   partOfSpeech: string | null;
   jlptLevel: string | null;
+  confusionCount: number;
 };
 
 type QuizMode = "meaning-to-word" | "word-to-meaning" | "multiple-choice" | "ox";
@@ -66,7 +67,8 @@ export function QuizSession({ words }: { words: QuizWord[] }) {
 
   const question = useMemo<ChoiceQuestion | OxQuestion | null>(() => {
     const pool = seededShuffle(words, seed + mode.length);
-    const answer = pool[0];
+    const urgentPool = pool.filter((word) => word.confusionCount > 0);
+    const answer = urgentPool[seed % 3 === 0 ? 0 : seed % urgentPool.length] ?? pool[0];
     if (!answer) return null;
 
     if (mode === "meaning-to-word") {

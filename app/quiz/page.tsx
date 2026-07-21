@@ -11,6 +11,7 @@ type QuizWord = {
   meaningKo: string;
   partOfSpeech: string | null;
   jlptLevel: string | null;
+  confusionCount: number;
 };
 
 export default async function QuizPage() {
@@ -22,13 +23,15 @@ export default async function QuizPage() {
 
   const { data } = await supabase
     .from("review_cards")
-    .select("vocabulary(id,dictionary_form,reading,meaning_ko,part_of_speech,jlpt_level)")
+    .select("confusion_count,vocabulary(id,dictionary_form,reading,meaning_ko,part_of_speech,jlpt_level)")
     .eq("user_id", user.id)
+    .order("confusion_count", { ascending: false })
     .order("saved_at", { ascending: false });
 
   const rawVocabulary = (data ?? []).flatMap((item) => {
     if (!item?.vocabulary) return [];
-    return Array.isArray(item.vocabulary) ? item.vocabulary : [item.vocabulary];
+    const vocabularyItems = Array.isArray(item.vocabulary) ? item.vocabulary : [item.vocabulary];
+    return vocabularyItems.map((vocabulary) => ({ ...vocabulary, confusion_count: item.confusion_count ?? 0 }));
   }) as Array<{
     id: string;
     dictionary_form: string;
@@ -36,6 +39,7 @@ export default async function QuizPage() {
     meaning_ko: string;
     part_of_speech: string | null;
     jlpt_level: string | null;
+    confusion_count: number;
   }>;
 
   const words = rawVocabulary
@@ -46,6 +50,7 @@ export default async function QuizPage() {
       meaningKo: item.meaning_ko,
       partOfSpeech: item.part_of_speech,
       jlptLevel: item.jlpt_level,
+      confusionCount: item.confusion_count,
     })) satisfies QuizWord[];
 
   return (
