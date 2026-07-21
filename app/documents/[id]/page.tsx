@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, BookOpen, FileText, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, Brain, FileText, Sparkles } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { AnalyzeButton } from "@/components/documents/analyze-button";
@@ -124,6 +124,9 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
           <div className="flex items-center gap-2 self-start">
             <PinDocumentButton documentId={document.id} initialPinned={Boolean(document.pinned_at)} />
             <DeleteDocumentButton documentId={document.id} redirectTo="/dashboard" />
+            <Link href={`/documents/${document.id}/quiz`} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[var(--line)] bg-white px-3 text-xs font-bold transition hover:bg-[#f7f7f4]">
+              <Brain size={14} /> 자료별 퀴즈
+            </Link>
             <AnalyzeButton documentId={document.id} />
           </div>
         </header>
