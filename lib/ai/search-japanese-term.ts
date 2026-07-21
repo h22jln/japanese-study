@@ -12,10 +12,13 @@ const dictionaryLookupSchema = z.object({
 const PROMPT = `당신은 일본어 학습용 초간단 사전입니다.
 주어진 일본어 단어/표현에 대해 학습자가 바로 이해할 수 있는 핵심 정보만 한국어로 정리하세요.
 
-- dictionaryForm: 기본형 또는 표제형
+- dictionaryForm: 반드시 사전 표제형. 동사는 사전형(辞書形), 형용사는 기본형, 명사는 표제형
 - reading: 히라가나 읽기
-- meaningKo: 짧은 한국어 뜻 목록
+- meaningKo: 표제형의 기본 한국어 뜻 목록
 - partOfSpeech: 품사 목록 (예: 명사, 동사, 형용사, 부사, 조사)
+- 검색어가 활용형, 과거형, 부정형, 가능형, 수동형, 사역형이어도 dictionaryForm과 meaningKo는 원래 표제어 기준으로 반환
+- 예: "振らない"는 dictionaryForm "振る", meaningKo는 "흔들다", "뿌리치다"처럼 쓰고 "흔들지 않다"로 쓰지 말 것
+- 예: "行かなかった"는 dictionaryForm "行く", meaningKo는 "가다"처럼 쓰고 "가지 않았다"로 쓰지 말 것
 - 확신이 낮아도 가장 가능성 높은 1개 항목만 반환
 - 군더더기 설명 금지
 - JSON 스키마에 맞춰서만 반환`;

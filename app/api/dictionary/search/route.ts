@@ -20,6 +20,10 @@ function canUseAiFallback(term: string) {
   return true;
 }
 
+function looksInflected(term: string) {
+  return /(ない|なかった|ません|ませんでした|た|て|れる|られる|せる|させる|たい|そう|れば|えば|いた|いだ|した|った|んだ)$/.test(term);
+}
+
 export async function GET(request: Request) {
   const supabase = await createServerSupabaseClient();
   if (!supabase) return NextResponse.json({ error: "Supabase is not configured" }, { status: 503 });
@@ -113,11 +117,13 @@ export async function GET(request: Request) {
   } | null = null;
 
   if (localVocabulary.length === 0 && entriesWithKorean.length === 0 && canUseAiFallback(term)) {
-    const { data: cachedAiEntry } = await admin
-      .from("dictionary_ai_cache")
-      .select("term,dictionary_form,reading,meanings_ko,parts_of_speech")
-      .eq("term", term)
-      .maybeSingle();
+    const { data: cachedAiEntry } = looksInflected(term)
+      ? { data: null }
+      : await admin
+          .from("dictionary_ai_cache")
+          .select("term,dictionary_form,reading,meanings_ko,parts_of_speech")
+          .eq("term", term)
+          .maybeSingle();
 
     if (cachedAiEntry) {
       fallbackAiEntry = {

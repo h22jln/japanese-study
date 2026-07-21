@@ -92,6 +92,8 @@ export function HighlightedBody({
   const [noteError, setNoteError] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+  const [deletedVocabularyIds, setDeletedVocabularyIds] = useState<string[]>([]);
+  const [deletingVocabularyId, setDeletingVocabularyId] = useState<string | null>(null);
   const [dictionaryState, setDictionaryState] = useState<{
     loading: boolean;
     error: string;
@@ -302,6 +304,20 @@ export function HighlightedBody({
     setNotes((current) => current.filter((note) => note.id !== noteId));
   }
 
+  async function deleteLookupVocabulary(vocabularyId: string) {
+    if (deletingVocabularyId) return;
+    setDeletingVocabularyId(vocabularyId);
+    const response = await fetch(`/api/documents/${documentId}/vocabulary`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vocabularyId }),
+    });
+    setDeletingVocabularyId(null);
+    if (!response.ok) return;
+    setDeletedVocabularyIds((current) => [...current, vocabularyId]);
+    router.refresh();
+  }
+
   async function searchSelectedText(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     if (!selectedText) return;
@@ -372,6 +388,9 @@ export function HighlightedBody({
     return (matcher ? text.split(matcher) : [text]).map((part, index) => {
       const word = lookup.get(part);
       if (!word) return <span key={`${keyPrefix}-text-${index}`}>{part}</span>;
+      if (word.source === "user_lookup" && deletedVocabularyIds.includes(word.vocabulary.id)) {
+        return <span key={`${keyPrefix}-deleted-${index}`}>{part}</span>;
+      }
       const highlightClass = word.source === "user_lookup"
         ? "bg-[#c9f4e5]/80 hover:bg-[#9ce8cc] focus:bg-[#9ce8cc]"
         : "bg-[#ffe8a3]/70 hover:bg-[#ffd866] focus:bg-[#ffd866]";
@@ -391,10 +410,23 @@ export function HighlightedBody({
           className={`group relative inline cursor-pointer rounded px-0.5 outline-none transition ${highlightClass}`}
         >
           {part}
-          <span role="tooltip" className="pointer-events-none absolute bottom-[calc(100%+.45rem)] left-0 z-30 hidden w-56 rounded-xl bg-[#20201d] p-3 text-left text-sm leading-5 tracking-normal text-white shadow-xl group-hover:block group-focus:block">
+          <span role="tooltip" className="absolute bottom-[calc(100%+.45rem)] left-0 z-30 hidden w-56 rounded-xl bg-[#20201d] p-3 text-left text-sm leading-5 tracking-normal text-white shadow-xl group-hover:block group-focus:block">
             <strong className="block text-base">{word.vocabulary.dictionary_form}</strong>
             <span className="mt-1 block text-white/65">{word.vocabulary.reading}{formatPartOfSpeech(word.vocabulary.part_of_speech) ? ` · ${formatPartOfSpeech(word.vocabulary.part_of_speech)}` : ""}</span>
             <span className="mt-2 block">{word.vocabulary.meaning_ko}</span>
+            {word.source === "user_lookup" && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  deleteLookupVocabulary(word.vocabulary.id);
+                }}
+                disabled={deletingVocabularyId === word.vocabulary.id}
+                className="mt-3 inline-flex min-h-8 items-center gap-1.5 rounded-full bg-white/10 px-3 text-xs font-bold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Trash2 size={13} /> {deletingVocabularyId === word.vocabulary.id ? "삭제 중" : "표시 삭제"}
+              </button>
+            )}
           </span>
         </span>
       );
@@ -428,9 +460,20 @@ export function HighlightedBody({
       parts.push(
         <span key={`note-${note.id}`} className="group/note relative rounded bg-[#d9f6ee] px-0.5 ring-1 ring-[#a9e5d3]">
           {line.slice(note.start, note.end)}
-          <span role="tooltip" className="pointer-events-none absolute bottom-[calc(100%+.45rem)] left-0 z-30 hidden w-64 rounded-xl bg-[#20201d] p-3 text-left text-sm leading-5 tracking-normal text-white shadow-xl group-hover/note:block">
+          <span role="tooltip" className="absolute bottom-[calc(100%+.45rem)] left-0 z-30 hidden w-64 rounded-xl bg-[#20201d] p-3 text-left text-sm leading-5 tracking-normal text-white shadow-xl group-hover/note:block">
             <strong className="block text-xs text-white/55">메모</strong>
             <span className="mt-1 block whitespace-pre-wrap">{note.note_text}</span>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                deleteNote(note.id);
+              }}
+              disabled={deletingNoteId === note.id}
+              className="mt-3 inline-flex min-h-8 items-center gap-1.5 rounded-full bg-white/10 px-3 text-xs font-bold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Trash2 size={13} /> {deletingNoteId === note.id ? "삭제 중" : "메모 삭제"}
+            </button>
           </span>
         </span>,
       );
