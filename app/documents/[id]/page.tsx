@@ -36,6 +36,32 @@ type GrammarPoint = {
   example_ko: string | null;
 };
 
+const grammarSectionLabels = ["접속", "뉘앙스", "사용 상황", "주의", "설명"];
+
+function parseGrammarExplanation(value: string) {
+  const lines = value.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const sections: Array<{ label: string; text: string }> = [];
+  const rest: string[] = [];
+
+  for (const line of lines) {
+    const match = line.match(/^(접속|뉘앙스|사용\s*상황|주의|설명)\s*[:：-]\s*(.+)$/);
+    if (!match) {
+      rest.push(line.replace(/^[-•]\s*/, ""));
+      continue;
+    }
+
+    const label = match[1].replace(/\s+/g, "").replace("사용상황", "사용 상황");
+    sections.push({ label, text: match[2].trim() });
+  }
+
+  if (sections.length === 0 && rest.length > 0) return [{ label: "설명", text: rest.join(" ") }];
+  if (rest.length > 0) sections.push({ label: "설명", text: rest.join(" ") });
+
+  return grammarSectionLabels
+    .map((label) => sections.find((section) => section.label === label))
+    .filter((section): section is { label: string; text: string } => Boolean(section));
+}
+
 export default async function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
@@ -130,15 +156,45 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
                 <div className="mt-6 space-y-4">
                   {grammarItems.map((grammar) => (
                     <article key={grammar.id} className="rounded-2xl border border-[var(--line)] p-4 sm:p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="break-words font-bold">{grammar.pattern}</h3>
-                          <p className="mt-1 text-sm font-semibold text-[var(--accent)]">{grammar.meaning_ko}</p>
-                        </div>
-                        <SaveGrammarButton grammarPointId={grammar.id} userId={user.id} initialSaved={savedGrammarPointIds.has(grammar.id)} />
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{grammar.explanation_ko}</p>
-                      {grammar.example_ja && <div className="mt-4 rounded-xl bg-[#f7f7f4] p-4 text-sm"><p>{grammar.example_ja}</p><p className="mt-1 text-[var(--muted)]">{grammar.example_ko}</p></div>}
+                      {(() => {
+                        const explanationSections = parseGrammarExplanation(grammar.explanation_ko);
+
+                        return (
+                          <>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <h3 className="break-words text-xl font-extrabold leading-snug text-[var(--foreground)] sm:text-2xl">{grammar.pattern}</h3>
+                                <p className="mt-2 text-sm font-bold text-[var(--accent)] sm:text-base">{grammar.meaning_ko}</p>
+                              </div>
+                              <SaveGrammarButton grammarPointId={grammar.id} userId={user.id} initialSaved={savedGrammarPointIds.has(grammar.id)} />
+                            </div>
+
+                            {explanationSections.length > 0 && (
+                              <dl className="mt-5 grid gap-2 sm:grid-cols-3">
+                                {explanationSections.map((section) => (
+                                  <div key={section.label} className="min-w-0 rounded-xl bg-[#f7f7f4] p-3">
+                                    <dt className="text-[11px] font-extrabold text-[var(--accent)]">{section.label}</dt>
+                                    <dd className="mt-1 break-words text-sm leading-6 text-[var(--muted)]">{section.text}</dd>
+                                  </div>
+                                ))}
+                              </dl>
+                            )}
+
+                            {grammar.example_ja && (
+                              <div className="mt-4 rounded-xl border border-[var(--line)] bg-white p-4 text-sm">
+                                <p className="text-[11px] font-extrabold text-[var(--muted)]">예문</p>
+                                <p className="mt-2 break-words text-base font-bold leading-7 text-[var(--foreground)]">{grammar.example_ja}</p>
+                                <p className="mt-1 break-words leading-6 text-[var(--muted)]">{grammar.example_ko}</p>
+                              </div>
+                            )}
+
+                            <div className="mt-4 rounded-xl bg-[#fff8ec] p-4 text-sm">
+                              <p className="text-[11px] font-extrabold text-[var(--accent)]">직접 써보기</p>
+                              <p className="mt-1 break-words leading-6 text-[var(--muted)]">{grammar.pattern}를 사용해서 내 상황에 맞는 문장을 하나 만들어보세요.</p>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </article>
                   ))}
                 </div>
