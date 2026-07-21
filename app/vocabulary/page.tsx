@@ -2,8 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { SaveVocabularyButton } from "@/components/vocabulary/save-vocabulary-button";
-import { formatPartOfSpeech } from "@/lib/dictionary/format-part-of-speech";
+import { VocabularyStudyList } from "@/components/vocabulary/vocabulary-study-list";
 
 type SavedCard = {
   id: string;
@@ -76,44 +75,7 @@ export default async function VocabularyPage() {
             </div>
           </section>
         ) : (
-          <section className="mt-8 space-y-8 sm:mt-10">
-            {groupedCards.map(([savedDate, cards]) => (
-              <section key={savedDate}>
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-bold">{savedDate}</h2>
-                  <span className="text-xs text-[var(--muted)]">{cards.length}개</span>
-                </div>
-
-                <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {cards.map((card) => (
-                    <article key={card.id} className="rounded-3xl border border-[var(--line)] bg-white p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          {(() => {
-                            const partOfSpeech = formatPartOfSpeech(card.vocabulary.part_of_speech);
-
-                            return (
-                              <>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <h3 className="break-words text-xl font-bold">{card.vocabulary.dictionary_form}</h3>
-                                  {card.vocabulary.jlpt_level && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">{card.vocabulary.jlpt_level}</span>}
-                                  {(card.confusion_count ?? 0) > 0 && <span className="rounded-full bg-[#fff0cc] px-2 py-0.5 text-[10px] font-bold text-[#9a5b00]">헷갈림 {card.confusion_count}</span>}
-                                </div>
-                                <p className="mt-1 break-words text-sm text-[var(--muted)]">{card.vocabulary.reading}{partOfSpeech ? ` · ${partOfSpeech}` : ""}</p>
-                                <p className="mt-3 text-base font-semibold">{card.vocabulary.meaning_ko}</p>
-                                {card.last_confused_at && <p className="mt-2 text-xs text-[var(--muted)]">최근 헷갈림 {new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(new Date(card.last_confused_at))}</p>}
-                              </>
-                            );
-                          })()}
-                        </div>
-                        <SaveVocabularyButton vocabularyId={card.vocabulary.id} userId={user.id} initialSaved />
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </section>
+          <VocabularyStudyList groupedCards={groupedCards} userId={user.id} />
         )}
       </div>
     </main>

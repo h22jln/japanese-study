@@ -697,7 +697,7 @@ export function HighlightedBody({
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-bold text-[var(--accent)]">사전 검색</p>
-              <h3 className="truncate text-lg font-bold">{selectedText}</h3>
+              <h3 className="truncate font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-lg font-bold">{selectedText}</h3>
             </div>
             <button
               type="button"
@@ -723,15 +723,15 @@ export function HighlightedBody({
                       type="button"
                       disabled={savingKey === `local-${item.id}`}
                       onClick={() => saveDictionaryItem({ vocabularyId: item.id }, `local-${item.id}`)}
-                      className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-[var(--line)] bg-white px-2.5 text-xs font-bold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full border border-[var(--line)] bg-white px-2.5 text-[11px] font-bold leading-none text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
                       aria-label={item.isSaved ? "한 번 더 보기" : "단어장 저장"}
-                      title={item.isSaved ? "헷갈림 표시" : "단어장 저장"}
+                      title={item.isSaved ? "재확인 표시" : "단어장 저장"}
                     >
-                      {item.isSaved ? <BookmarkCheck size={15} className="text-[var(--accent)]" /> : <Bookmark size={15} />}
+                      {item.isSaved ? <BookmarkCheck size={14} className="text-[var(--accent)]" /> : <Bookmark size={14} />}
                       {item.isSaved && "한 번 더"}
                     </button>
                   </div>
-                  <p className="mt-2 font-bold">{item.dictionaryForm}</p>
+                  <p className="mt-2 font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-lg font-bold leading-snug">{item.dictionaryForm}</p>
                   <p className="text-sm text-[var(--muted)]">{item.reading}{formatPartOfSpeech(item.partOfSpeech) ? ` · ${formatPartOfSpeech(item.partOfSpeech)}` : ""}</p>
                   <p className="mt-2 text-sm">{item.meaningKo}</p>
                 </div>
@@ -740,7 +740,7 @@ export function HighlightedBody({
                 <div key={entry.id} className="rounded-2xl border border-[var(--line)] p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-bold">{entry.primarySpelling ?? entry.primaryReading}</p>
+                      <p className="font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-lg font-bold leading-snug">{entry.primarySpelling ?? entry.primaryReading}</p>
                       <span className="text-sm text-[var(--muted)]">{entry.primaryReading}</span>
                       {entry.source === "ai" && <span className="rounded-full bg-[#f7f1eb] px-2 py-0.5 text-[10px] font-bold text-[var(--accent)]">AI</span>}
                       {entry.isCommon && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">common</span>}
@@ -761,11 +761,11 @@ export function HighlightedBody({
                           : { entryId: entry.id },
                         `entry-${entry.id}`,
                       )}
-                      className="inline-flex min-h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[var(--line)] bg-white px-2.5 text-xs font-bold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full border border-[var(--line)] bg-white px-2.5 text-[11px] font-bold leading-none text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
                       aria-label={entry.isSaved ? "한 번 더 보기" : "단어장 저장"}
-                      title={entry.isSaved ? "헷갈림 표시" : "단어장 저장"}
+                      title={entry.isSaved ? "재확인 표시" : "단어장 저장"}
                     >
-                      {entry.isSaved ? <BookmarkCheck size={15} className="text-[var(--accent)]" /> : <Bookmark size={15} />}
+                      {entry.isSaved ? <BookmarkCheck size={14} className="text-[var(--accent)]" /> : <Bookmark size={14} />}
                       {entry.isSaved && "한 번 더"}
                     </button>
                   </div>
