@@ -1,7 +1,7 @@
 "use client";
 
 import { MouseEvent, useEffect, useRef, useState } from "react";
-import { BookOpen, Bookmark, BookmarkCheck, ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { BookOpen, Bookmark, BookmarkCheck, ChevronDown, ChevronUp, Languages, Search, Sparkles, X } from "lucide-react";
 import { formatPartOfSpeech, formatPartOfSpeechList } from "@/lib/dictionary/format-part-of-speech";
 
 type HighlightWord = {
@@ -32,11 +32,13 @@ export function HighlightedBody({
   words,
   lines,
   initialTranslations,
+  initialSummary,
 }: {
   documentId: string;
   words: HighlightWord[];
   lines?: Array<string | BodyLine> | null;
   initialTranslations?: Record<string, string> | null;
+  initialSummary?: string | null;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const lookup = new Map<string, HighlightWord>();
@@ -57,6 +59,11 @@ export function HighlightedBody({
   const [openIndexes, setOpenIndexes] = useState<number[]>(Object.keys(normalizedInitialTranslations).map(Number));
   const [translations, setTranslations] = useState<Record<number, string>>(normalizedInitialTranslations);
   const [loadingIndexes, setLoadingIndexes] = useState<number[]>([]);
+  const [isTranslatingAll, setIsTranslatingAll] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [toolError, setToolError] = useState("");
+  const [summary, setSummary] = useState(initialSummary?.trim() ?? "");
+  const [summaryOpen, setSummaryOpen] = useState(Boolean(initialSummary?.trim()));
   const [selectedText, setSelectedText] = useState("");
   const [selectionButton, setSelectionButton] = useState<{ top: number; left: number } | null>(null);
   const [dictionaryState, setDictionaryState] = useState<{
@@ -114,6 +121,51 @@ export function HighlightedBody({
     }
 
     setTranslations((current) => ({ ...current, [index]: payload.translation ?? "" }));
+  }
+
+  async function translateAll() {
+    if (isTranslatingAll) return;
+
+    setIsTranslatingAll(true);
+    setToolError("");
+    const response = await fetch(`/api/documents/${documentId}/translate-all`, { method: "POST" });
+    const payload = await response.json().catch(() => null);
+    setIsTranslatingAll(false);
+
+    if (!response.ok) {
+      setToolError(payload?.error ?? "전체 해석을 불러오지 못했습니다.");
+      return;
+    }
+
+    const nextTranslations = Object.entries(payload?.translations ?? {}).reduce<Record<number, string>>((acc, [key, value]) => {
+      const index = Number(key);
+      if (Number.isInteger(index) && typeof value === "string" && value.trim()) acc[index] = value;
+      return acc;
+    }, {});
+    setTranslations(nextTranslations);
+    setOpenIndexes(displayLines.map((_, index) => index));
+  }
+
+  async function summarizeDocument() {
+    if (isSummarizing) return;
+    if (summary) {
+      setSummaryOpen((current) => !current);
+      return;
+    }
+
+    setIsSummarizing(true);
+    setToolError("");
+    const response = await fetch(`/api/documents/${documentId}/summary`, { method: "POST" });
+    const payload = await response.json().catch(() => null);
+    setIsSummarizing(false);
+
+    if (!response.ok) {
+      setToolError(payload?.error ?? "요약을 불러오지 못했습니다.");
+      return;
+    }
+
+    setSummary(payload?.summary ?? "");
+    setSummaryOpen(true);
   }
 
   function clearSelectionLookup() {
@@ -237,6 +289,32 @@ export function HighlightedBody({
 
   return (
     <div ref={rootRef} className="relative space-y-5 text-[1.05rem] leading-9 tracking-[.01em] text-[#30312c] sm:text-lg sm:leading-10">
+      <div className="flex flex-col gap-3 rounded-2xl bg-[#f7f7f4] p-3 text-sm leading-6 tracking-normal sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={translateAll}
+            disabled={isTranslatingAll}
+            className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[var(--line)] bg-white px-3 text-xs font-bold transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Languages size={14} /> {isTranslatingAll ? "해석 중" : "전체 해석"}
+          </button>
+          <button
+            type="button"
+            onClick={summarizeDocument}
+            disabled={isSummarizing}
+            className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[var(--line)] bg-white px-3 text-xs font-bold transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Sparkles size={14} /> {isSummarizing ? "요약 중" : summaryOpen ? "요약 닫기" : "내용 요약"}
+          </button>
+        </div>
+        {toolError && <p className="break-words text-xs text-red-600">{toolError}</p>}
+      </div>
+      {summaryOpen && summary && (
+        <div className="whitespace-pre-wrap rounded-2xl border border-[var(--line)] bg-white p-4 text-sm leading-7 tracking-normal text-[var(--muted)]">
+          {summary}
+        </div>
+      )}
       {displayLines.map((line, lineIndex) => {
         const isOpen = openIndexes.includes(lineIndex);
         const isLoading = loadingIndexes.includes(lineIndex);
