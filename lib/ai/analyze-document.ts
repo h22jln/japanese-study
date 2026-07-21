@@ -73,8 +73,6 @@ export async function analyzeDocument(payload: { documentId: string; userId: str
     const analysis = response.output_parsed;
     if (!analysis) throw new Error("The model returned no structured analysis");
 
-    const { error: clearLinksError } = await supabase.from("document_vocabulary").delete().eq("document_id", payload.documentId);
-    if (clearLinksError) throw clearLinksError;
     const { error: clearGrammarError } = await supabase.from("grammar_points").delete().eq("document_id", payload.documentId);
     if (clearGrammarError) throw clearGrammarError;
 
@@ -93,15 +91,31 @@ export async function analyzeDocument(payload: { documentId: string; userId: str
         .single();
       if (vocabularyError || !vocabulary) throw vocabularyError ?? new Error("Vocabulary save failed");
 
-      const { error: linkError } = await supabase.from("document_vocabulary").insert({
+      const linkPayload = {
         document_id: payload.documentId,
         vocabulary_id: vocabulary.id,
         surface_form: word.surface,
         example_ja: null,
         example_ko: null,
         source_page: word.sourcePage,
-      });
-      if (linkError) throw linkError;
+        source: "analysis",
+      };
+      const { error: linkError } = await supabase
+        .from("document_vocabulary")
+        .upsert(linkPayload, { onConflict: "document_id,vocabulary_id" });
+      if (linkError) {
+        const { error: legacyLinkError } = await supabase
+          .from("document_vocabulary")
+          .upsert({
+            document_id: linkPayload.document_id,
+            vocabulary_id: linkPayload.vocabulary_id,
+            surface_form: linkPayload.surface_form,
+            example_ja: linkPayload.example_ja,
+            example_ko: linkPayload.example_ko,
+            source_page: linkPayload.source_page,
+          }, { onConflict: "document_id,vocabulary_id" });
+        if (legacyLinkError) throw legacyLinkError;
+      }
     }
 
     if (analysis.grammarPoints.length > 0) {

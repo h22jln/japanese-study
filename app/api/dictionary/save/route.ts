@@ -123,17 +123,30 @@ export async function POST(request: Request) {
       .single();
 
     if (document) {
-      await admin
+      const linkPayload = {
+        document_id: documentId,
+        vocabulary_id: vocabularyId,
+        surface_form: surfaceForm,
+        example_ja: null,
+        example_ko: null,
+        source_page: null,
+        source: "user_lookup",
+      };
+      const { error: linkError } = await admin
         .from("document_vocabulary")
-        .upsert({
-          document_id: documentId,
-          vocabulary_id: vocabularyId,
-          surface_form: surfaceForm,
-          example_ja: null,
-          example_ko: null,
-          source_page: null,
-          source: "user_lookup",
-        }, { onConflict: "document_id,vocabulary_id", ignoreDuplicates: true });
+        .upsert(linkPayload, { onConflict: "document_id,vocabulary_id", ignoreDuplicates: true });
+      if (linkError) {
+        await admin
+          .from("document_vocabulary")
+          .upsert({
+            document_id: linkPayload.document_id,
+            vocabulary_id: linkPayload.vocabulary_id,
+            surface_form: linkPayload.surface_form,
+            example_ja: linkPayload.example_ja,
+            example_ko: linkPayload.example_ko,
+            source_page: linkPayload.source_page,
+          }, { onConflict: "document_id,vocabulary_id", ignoreDuplicates: true });
+      }
     }
   }
 

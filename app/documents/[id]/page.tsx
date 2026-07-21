@@ -82,15 +82,26 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: document }, { data: words }, { data: grammarPoints }, { data: savedCards }, { data: savedGrammarPoints }, { data: notes }] = await Promise.all([
+  const [{ data: document }, { data: grammarPoints }, { data: savedCards }, { data: savedGrammarPoints }, { data: notes }] = await Promise.all([
     supabase.from("documents").select("id,title,status,body_lines,body_line_translations,summary_ko,error_message,created_at,pinned_at").eq("id", id).single(),
-    supabase.from("document_vocabulary").select("surface_form,example_ja,example_ko,source_page,source,vocabulary(id,dictionary_form,reading,meaning_ko,part_of_speech,jlpt_level)").eq("document_id", id),
     supabase.from("grammar_points").select("id,pattern,meaning_ko,explanation_ko,example_ja,example_ko").eq("document_id", id).order("created_at"),
     supabase.from("review_cards").select("vocabulary_id"),
     supabase.from("saved_grammar_points").select("grammar_point_id"),
     supabase.from("document_notes").select("id,line_index,selected_text,note_text,start_offset,end_offset,created_at,updated_at").eq("document_id", id).order("line_index").order("created_at"),
   ]);
   if (!document) notFound();
+
+  const { data: wordsWithSource, error: wordsWithSourceError } = await supabase
+    .from("document_vocabulary")
+    .select("surface_form,example_ja,example_ko,source_page,source,vocabulary(id,dictionary_form,reading,meaning_ko,part_of_speech,jlpt_level)")
+    .eq("document_id", id);
+  const { data: wordsWithoutSource } = wordsWithSourceError
+    ? await supabase
+        .from("document_vocabulary")
+        .select("surface_form,example_ja,example_ko,source_page,vocabulary(id,dictionary_form,reading,meaning_ko,part_of_speech,jlpt_level)")
+        .eq("document_id", id)
+    : { data: null };
+  const words = wordsWithSourceError ? wordsWithoutSource : wordsWithSource;
 
   const isPending = document.status === "queued" || document.status === "processing";
   const vocabularyWords = (words ?? []) as unknown as VocabularyLink[];
