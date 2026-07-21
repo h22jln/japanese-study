@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Shuffle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { SaveVocabularyButton } from "@/components/vocabulary/save-vocabulary-button";
 import { formatPartOfSpeech } from "@/lib/dictionary/format-part-of-speech";
@@ -26,12 +26,36 @@ type VocabularyStudyListProps = {
   userId: string;
 };
 
+type StudyMode = "all" | "paged" | "random";
+const pageSize = 10;
+
+function shuffleCards(cards: SavedCard[]) {
+  return [...cards]
+    .map((card) => ({ card, sort: Math.random() }))
+    .sort((a, b) => a.sort - b.sort)
+    .map(({ card }) => card);
+}
+
 export function VocabularyStudyList({ groupedCards, userId }: VocabularyStudyListProps) {
   const [hideJapanese, setHideJapanese] = useState(false);
   const [hideMeaning, setHideMeaning] = useState(false);
   const [shownJapaneseIds, setShownJapaneseIds] = useState<string[]>([]);
   const [shownMeaningIds, setShownMeaningIds] = useState<string[]>([]);
+  const [studyMode, setStudyMode] = useState<StudyMode>("all");
+  const [pageIndex, setPageIndex] = useState(0);
+  const [randomCards, setRandomCards] = useState<SavedCard[]>([]);
   const allCards = useMemo(() => groupedCards.flatMap(([, cards]) => cards), [groupedCards]);
+  const totalPages = Math.max(1, Math.ceil(allCards.length / pageSize));
+  const visibleCards = useMemo(() => {
+    if (studyMode === "paged") return allCards.slice(pageIndex * pageSize, pageIndex * pageSize + pageSize);
+    if (studyMode === "random") return randomCards;
+    return allCards;
+  }, [allCards, pageIndex, randomCards, studyMode]);
+
+  const visibleGroupedCards = useMemo(() => {
+    if (studyMode === "all") return groupedCards;
+    return [["이번 세트", visibleCards]] as Array<[string, SavedCard[]]>;
+  }, [groupedCards, studyMode, visibleCards]);
 
   function toggleJapanese(cardId: string) {
     if (!hideJapanese) return;
@@ -53,12 +77,57 @@ export function VocabularyStudyList({ groupedCards, userId }: VocabularyStudyLis
     setShownMeaningIds([]);
   }
 
+  function changeStudyMode(nextMode: StudyMode) {
+    setStudyMode(nextMode);
+    setShownJapaneseIds([]);
+    setShownMeaningIds([]);
+    if (nextMode === "paged") setPageIndex(0);
+    if (nextMode === "random") setRandomCards(shuffleCards(allCards).slice(0, pageSize));
+  }
+
+  function showRandomSet() {
+    setStudyMode("random");
+    setRandomCards(shuffleCards(allCards).slice(0, pageSize));
+    setShownJapaneseIds([]);
+    setShownMeaningIds([]);
+  }
+
+  function movePage(direction: -1 | 1) {
+    setPageIndex((current) => Math.min(totalPages - 1, Math.max(0, current + direction)));
+    setShownJapaneseIds([]);
+    setShownMeaningIds([]);
+  }
+
   return (
     <section className="mt-8 space-y-6 sm:mt-10">
       <div className="sticky top-0 z-20 -mx-4 border-y border-[var(--line)] bg-[var(--background)]/95 px-4 py-3 backdrop-blur sm:top-0 sm:mx-0 sm:rounded-2xl sm:border sm:bg-white/90">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-semibold text-[var(--muted)]">{allCards.length}개 단어 암기</p>
+          <div>
+            <p className="text-sm font-semibold text-[var(--muted)]">{allCards.length}개 단어 암기</p>
+            {studyMode !== "all" && <p className="mt-0.5 text-xs text-[var(--muted)]">현재 {visibleCards.length}개 표시</p>}
+          </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => changeStudyMode("all")}
+              className={`inline-flex min-h-9 items-center rounded-full border px-3 text-xs font-bold transition ${studyMode === "all" ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-white hover:border-[var(--accent)] hover:text-[var(--accent)]"}`}
+            >
+              전체
+            </button>
+            <button
+              type="button"
+              onClick={() => changeStudyMode("paged")}
+              className={`inline-flex min-h-9 items-center rounded-full border px-3 text-xs font-bold transition ${studyMode === "paged" ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-white hover:border-[var(--accent)] hover:text-[var(--accent)]"}`}
+            >
+              10개씩
+            </button>
+            <button
+              type="button"
+              onClick={showRandomSet}
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-bold transition ${studyMode === "random" ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--line)] bg-white hover:border-[var(--accent)] hover:text-[var(--accent)]"}`}
+            >
+              <Shuffle size={14} /> 랜덤 10개
+            </button>
             <button
               type="button"
               onClick={toggleAllJapanese}
@@ -75,9 +144,30 @@ export function VocabularyStudyList({ groupedCards, userId }: VocabularyStudyLis
             </button>
           </div>
         </div>
+        {studyMode === "paged" && (
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
+            <button
+              type="button"
+              onClick={() => movePage(-1)}
+              disabled={pageIndex === 0}
+              className="inline-flex h-8 items-center gap-1 rounded-full border border-[var(--line)] bg-white px-3 text-xs font-bold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft size={14} /> 이전
+            </button>
+            <p className="text-xs font-bold text-[var(--muted)]">{pageIndex + 1} / {totalPages}</p>
+            <button
+              type="button"
+              onClick={() => movePage(1)}
+              disabled={pageIndex >= totalPages - 1}
+              className="inline-flex h-8 items-center gap-1 rounded-full border border-[var(--line)] bg-white px-3 text-xs font-bold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              다음 <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
-      {groupedCards.map(([savedDate, cards]) => (
+      {visibleGroupedCards.map(([savedDate, cards]) => (
         <section key={savedDate}>
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-bold">{savedDate}</h2>
