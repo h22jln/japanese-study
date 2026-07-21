@@ -124,7 +124,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
           <div className="flex items-center gap-2 self-start">
             <PinDocumentButton documentId={document.id} initialPinned={Boolean(document.pinned_at)} />
             <DeleteDocumentButton documentId={document.id} redirectTo="/dashboard" />
-            {(document.status === "queued" || document.status === "failed" || bodyLines.length === 0) && <AnalyzeButton documentId={document.id} />}
+            <AnalyzeButton documentId={document.id} />
           </div>
         </header>
 
