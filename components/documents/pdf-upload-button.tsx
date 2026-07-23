@@ -1,24 +1,26 @@
 "use client";
 
 import { ChangeEvent, useId, useState } from "react";
-import { Plus, Upload } from "lucide-react";
+import { FileText, ImageIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "heic", "heif"];
+type UploadKind = "pdf" | "jlpt-image";
 
 type PdfUploadButtonProps = {
   variant?: "primary" | "empty";
 };
 
 export function PdfUploadButton({ variant = "primary" }: PdfUploadButtonProps) {
-  const inputId = useId();
+  const pdfInputId = useId();
+  const imageInputId = useId();
   const router = useRouter();
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function uploadPdf(event: ChangeEvent<HTMLInputElement>) {
+  async function uploadStudyFile(kind: UploadKind, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
@@ -28,7 +30,8 @@ export function PdfUploadButton({ variant = "primary" }: PdfUploadButtonProps) {
     const isPdf = file.type === "application/pdf" || fileName.endsWith(".pdf");
     const imageExtension = ALLOWED_IMAGE_EXTENSIONS.find((extension) => fileName.endsWith(`.${extension}`));
     const isImage = Boolean(imageExtension) || file.type.startsWith("image/");
-    if (!isPdf && !isImage) return setMessage("PDF 또는 JLPT 사진 파일만 업로드할 수 있습니다.");
+    if (kind === "pdf" && !isPdf) return setMessage("PDF 파일만 선택해주세요.");
+    if (kind === "jlpt-image" && !isImage) return setMessage("JLPT 사진은 JPG/PNG/WebP 이미지로 선택해주세요.");
     if (file.size > MAX_FILE_SIZE) return setMessage("파일 크기는 20MB 이하여야 합니다.");
 
     const supabase = createClient();
@@ -75,13 +78,22 @@ export function PdfUploadButton({ variant = "primary" }: PdfUploadButtonProps) {
     router.refresh();
   }
 
+  const pdfAccept = "application/pdf,.pdf";
+  const imageAccept = "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.heic,.heif";
+
   if (variant === "empty") {
     return (
       <div>
-        <label htmlFor={inputId} className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-bold text-white hover:bg-[var(--accent-dark)]">
-          <Upload size={17} /> {isUploading ? "업로드 중..." : "PDF / JLPT 사진 선택"}
-        </label>
-        <input id={inputId} className="sr-only" type="file" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.heic,.heif" disabled={isUploading} onChange={uploadPdf} />
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <label htmlFor={pdfInputId} className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-bold text-white hover:bg-[var(--accent-dark)]">
+            <FileText size={17} /> {isUploading ? "업로드 중..." : "PDF 자료"}
+          </label>
+          <label htmlFor={imageInputId} className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[var(--line)] bg-white px-5 py-3 text-sm font-bold hover:border-[var(--accent)] hover:text-[var(--accent)]">
+            <ImageIcon size={17} /> {isUploading ? "업로드 중..." : "JLPT 사진"}
+          </label>
+        </div>
+        <input id={pdfInputId} className="sr-only" type="file" accept={pdfAccept} disabled={isUploading} onChange={(event) => uploadStudyFile("pdf", event)} />
+        <input id={imageInputId} className="sr-only" type="file" accept={imageAccept} disabled={isUploading} onChange={(event) => uploadStudyFile("jlpt-image", event)} />
         {message && <p className={`mt-3 text-sm ${message.startsWith("업로드 완료") ? "text-green-700" : "text-red-600"}`} role="status">{message}</p>}
       </div>
     );
@@ -89,10 +101,16 @@ export function PdfUploadButton({ variant = "primary" }: PdfUploadButtonProps) {
 
   return (
     <div className="w-full text-left sm:w-auto sm:text-right">
-      <label htmlFor={inputId} className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3 font-bold text-white hover:bg-[var(--accent-dark)] sm:w-auto ${isUploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}>
-        <Plus size={18} /> {isUploading ? "업로드 중..." : "PDF / JLPT 사진 분석"}
-      </label>
-      <input id={inputId} className="sr-only" type="file" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.heic,.heif" disabled={isUploading} onChange={uploadPdf} />
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <label htmlFor={pdfInputId} className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3 font-bold text-white hover:bg-[var(--accent-dark)] sm:w-auto ${isUploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}>
+          <FileText size={18} /> {isUploading ? "업로드 중..." : "PDF 자료"}
+        </label>
+        <label htmlFor={imageInputId} className={`inline-flex w-full items-center justify-center gap-2 rounded-full border border-[var(--line)] bg-white px-5 py-3 font-bold hover:border-[var(--accent)] hover:text-[var(--accent)] sm:w-auto ${isUploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}>
+          <ImageIcon size={18} /> {isUploading ? "업로드 중..." : "JLPT 사진"}
+        </label>
+      </div>
+      <input id={pdfInputId} className="sr-only" type="file" accept={pdfAccept} disabled={isUploading} onChange={(event) => uploadStudyFile("pdf", event)} />
+      <input id={imageInputId} className="sr-only" type="file" accept={imageAccept} disabled={isUploading} onChange={(event) => uploadStudyFile("jlpt-image", event)} />
       {message && <p className={`mt-2 max-w-full break-words text-xs sm:max-w-xs ${message.startsWith("업로드 완료") ? "text-green-700" : "text-red-600"}`} role="status">{message}</p>}
     </div>
   );

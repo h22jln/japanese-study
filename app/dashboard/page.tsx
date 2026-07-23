@@ -11,10 +11,17 @@ import Link from "next/link";
 type DocumentItem = {
   id: string;
   title: string;
+  file_path: string;
   status: "queued" | "processing" | "completed" | "failed";
   created_at: string;
   pinned_at: string | null;
 };
+
+function getDocumentKind(filePath: string) {
+  return /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(filePath)
+    ? { label: "JLPT 사진", className: "bg-[#eef7ff] text-[#2c628d]" }
+    : { label: "PDF", className: "bg-[#f1eee7] text-[var(--muted)]" };
+}
 
 const statusLabels: Record<DocumentItem["status"], string> = {
   queued: "분석 대기",
@@ -37,7 +44,7 @@ export default async function DashboardPage() {
     if (profile?.username === "admin") redirect("/admin/users");
 
     const [{ data }, { count }, { count: savedGrammarCount }] = await Promise.all([
-      supabase.from("documents").select("id,title,status,created_at,pinned_at").order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
+      supabase.from("documents").select("id,title,file_path,status,created_at,pinned_at").order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
       supabase.from("review_cards").select("id", { count: "exact", head: true }),
       supabase.from("saved_grammar_points").select("id", { count: "exact", head: true }),
     ]);
@@ -77,9 +84,13 @@ export default async function DashboardPage() {
             <ul className="divide-y divide-[var(--line)]">
               {documents.map((document) => (
                 <li key={document.id} className="flex flex-col items-stretch gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
+                  {(() => {
+                    const kind = getDocumentKind(document.file_path);
+                    return (
+                      <>
                   <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#f1eee7] sm:h-11 sm:w-11"><FileText size={19} /></span>
-                    <div className="min-w-0"><div className="flex items-center gap-2"><Link href={`/documents/${document.id}`} className="truncate font-semibold hover:underline">{document.title}</Link>{document.pinned_at && <span className="rounded-full bg-[#fbe5df] px-2 py-0.5 text-[10px] font-bold text-[var(--accent)]">PIN</span>}</div><p className="mt-1 text-xs text-[var(--muted)]">{new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(new Date(document.created_at))}</p></div>
+                    <div className="min-w-0"><div className="flex items-center gap-2"><Link href={`/documents/${document.id}`} className="truncate font-semibold hover:underline">{document.title}</Link><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${kind.className}`}>{kind.label}</span>{document.pinned_at && <span className="rounded-full bg-[#fbe5df] px-2 py-0.5 text-[10px] font-bold text-[var(--accent)]">PIN</span>}</div><p className="mt-1 text-xs text-[var(--muted)]">{new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(new Date(document.created_at))}</p></div>
                   </div>
                   <div className="flex shrink-0 items-center justify-between gap-3 pl-[52px] text-left sm:pl-0">
                     <PinDocumentButton documentId={document.id} initialPinned={Boolean(document.pinned_at)} compact />
@@ -89,6 +100,9 @@ export default async function DashboardPage() {
                       {(document.status === "queued" || document.status === "failed") && <div className="mt-2"><AnalyzeButton documentId={document.id} /></div>}
                     </div>
                   </div>
+                      </>
+                    );
+                  })()}
                 </li>
               ))}
             </ul>

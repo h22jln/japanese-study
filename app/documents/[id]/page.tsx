@@ -84,7 +84,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   if (!user) redirect("/login");
 
   const [{ data: document }, { data: grammarPoints }, { data: savedCards }, { data: savedGrammarPoints }, { data: notes }, { data: profile }] = await Promise.all([
-    supabase.from("documents").select("id,title,status,body_lines,body_line_translations,summary_ko,error_message,created_at,pinned_at").eq("id", id).single(),
+    supabase.from("documents").select("id,title,file_path,status,body_lines,body_line_translations,summary_ko,error_message,created_at,pinned_at").eq("id", id).single(),
     supabase.from("grammar_points").select("id,pattern,meaning_ko,explanation_ko,example_ja,example_ko").eq("document_id", id).order("created_at"),
     supabase.from("review_cards").select("vocabulary_id"),
     supabase.from("saved_grammar_points").select("grammar_point_id"),
@@ -115,6 +115,9 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
     : {};
   const savedVocabularyIds = new Set((savedCards ?? []).map((card) => card.vocabulary_id));
   const savedGrammarPointIds = new Set((savedGrammarPoints ?? []).map((card) => card.grammar_point_id));
+  const documentKind = /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(document.file_path)
+    ? { label: "JLPT 사진", className: "bg-[#eef7ff] text-[#2c628d]" }
+    : { label: "PDF", className: "bg-[#f1eee7] text-[var(--muted)]" };
 
   return (
     <main className="min-h-screen px-4 py-6 sm:px-6 sm:py-8 md:px-10">
@@ -122,7 +125,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
       <div className="mx-auto max-w-7xl">
         <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--muted)] hover:text-[var(--foreground)]"><ArrowLeft size={16} /> 자료 목록</Link>
         <header className="mt-7 flex flex-col gap-5 sm:mt-8 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0"><p className="text-sm font-bold text-[var(--accent)]">일본어 학습 자료</p><div className="mt-2"><DocumentTitleForm documentId={document.id} initialTitle={document.title} /></div></div>
+          <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-bold text-[var(--accent)]">일본어 학습 자료</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${documentKind.className}`}>{documentKind.label}</span></div><div className="mt-2"><DocumentTitleForm documentId={document.id} initialTitle={document.title} /></div></div>
           <div className="flex items-center gap-2 self-start">
             <PinDocumentButton documentId={document.id} initialPinned={Boolean(document.pinned_at)} />
             <DeleteDocumentButton documentId={document.id} redirectTo="/dashboard" />
