@@ -28,7 +28,7 @@ export function PdfUploadButton({ variant = "primary" }: PdfUploadButtonProps) {
     const isPdf = file.type === "application/pdf" || fileName.endsWith(".pdf");
     const imageExtension = ALLOWED_IMAGE_EXTENSIONS.find((extension) => fileName.endsWith(`.${extension}`));
     const isImage = Boolean(imageExtension) || file.type.startsWith("image/");
-    if (!isPdf && !isImage) return setMessage("PDF 또는 JPG/PNG 이미지 파일만 업로드할 수 있습니다.");
+    if (!isPdf && !isImage) return setMessage("PDF 또는 JLPT 사진 파일만 업로드할 수 있습니다.");
     if (file.size > MAX_FILE_SIZE) return setMessage("파일 크기는 20MB 이하여야 합니다.");
 
     const supabase = createClient();
@@ -79,7 +79,7 @@ export function PdfUploadButton({ variant = "primary" }: PdfUploadButtonProps) {
     return (
       <div>
         <label htmlFor={inputId} className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-bold text-white hover:bg-[var(--accent-dark)]">
-          <Upload size={17} /> {isUploading ? "업로드 중..." : "PDF / 사진 선택"}
+          <Upload size={17} /> {isUploading ? "업로드 중..." : "PDF / JLPT 사진 선택"}
         </label>
         <input id={inputId} className="sr-only" type="file" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.heic,.heif" disabled={isUploading} onChange={uploadPdf} />
         {message && <p className={`mt-3 text-sm ${message.startsWith("업로드 완료") ? "text-green-700" : "text-red-600"}`} role="status">{message}</p>}
@@ -90,7 +90,7 @@ export function PdfUploadButton({ variant = "primary" }: PdfUploadButtonProps) {
   return (
     <div className="w-full text-left sm:w-auto sm:text-right">
       <label htmlFor={inputId} className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3 font-bold text-white hover:bg-[var(--accent-dark)] sm:w-auto ${isUploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}>
-        <Plus size={18} /> {isUploading ? "업로드 중..." : "자료 추가"}
+        <Plus size={18} /> {isUploading ? "업로드 중..." : "PDF / JLPT 사진 분석"}
       </label>
       <input id={inputId} className="sr-only" type="file" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.heic,.heif" disabled={isUploading} onChange={uploadPdf} />
       {message && <p className={`mt-2 max-w-full break-words text-xs sm:max-w-xs ${message.startsWith("업로드 완료") ? "text-green-700" : "text-red-600"}`} role="status">{message}</p>}

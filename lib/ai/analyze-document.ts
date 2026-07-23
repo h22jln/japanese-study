@@ -87,7 +87,7 @@ export async function analyzeDocument(payload: { documentId: string; userId: str
           role: "user",
           content: [
             { type: "input_text", text: `${IMAGE_ANALYSIS_PROMPT}\n\n자료 제목: ${document.title}` },
-            { type: "input_image", image_url: imageDataUrl },
+            { type: "input_image", image_url: imageDataUrl, detail: "auto" },
           ],
         }],
         text: { format: zodTextFormat(analysisSchema, "jlpt_scan_analysis") },

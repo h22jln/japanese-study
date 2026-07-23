@@ -51,7 +51,7 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-6xl">
         <DocumentStatusRefresher active={documents.some((document) => document.status === "processing")} />
         <header className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-          <div><p className="text-sm text-[var(--muted)]">またね！</p><h1 className="mt-1 text-2xl font-bold sm:text-3xl">내 학습 자료</h1></div>
+          <div><p className="text-sm text-[var(--muted)]">またね！</p><h1 className="mt-1 text-2xl font-bold sm:text-3xl">내 학습 자료</h1><p className="mt-2 text-sm text-[var(--muted)]">PDF와 JLPT 독해 사진을 올리면 AI가 본문, 단어, 문법을 정리합니다.</p></div>
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/settings" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[var(--line)] bg-white px-4 text-sm font-bold transition hover:border-[var(--accent)] hover:text-[var(--accent)]">
               <Palette size={16} /> 설정
