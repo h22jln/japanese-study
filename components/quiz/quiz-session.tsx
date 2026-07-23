@@ -12,7 +12,7 @@ type QuizWord = {
   confusionCount: number;
 };
 
-type QuizMode = "meaning-to-word" | "word-to-meaning" | "multiple-choice" | "ox";
+type QuizMode = "meaning-to-word" | "word-to-meaning" | "reading" | "kanji-blank" | "mixed" | "multiple-choice" | "ox";
 type ChoiceItem = {
   id: string;
   label: string;
@@ -24,6 +24,7 @@ type ChoiceQuestion = {
   prompt: string;
   helper: string;
   choices: ChoiceItem[];
+  promptClassName?: string;
 };
 type OxQuestion = {
   answer: QuizWord;
@@ -36,9 +37,14 @@ type OxQuestion = {
 const MODE_LABELS: Record<QuizMode, string> = {
   "meaning-to-word": "뜻 → 단어",
   "word-to-meaning": "단어 → 뜻",
+  reading: "읽기",
+  "kanji-blank": "한자",
+  mixed: "섞어서",
   "multiple-choice": "4지선다",
   ox: "OX 복습",
 };
+
+const kanjiPattern = /[\u3400-\u9fff]/;
 
 function seededValue(seed: number) {
   const value = Math.sin(seed * 999 + 17) * 10000;
@@ -58,6 +64,37 @@ function pickDistractors(words: QuizWord[], answer: QuizWord, count: number) {
   return words.filter((word) => word.id !== answer.id).slice(0, count);
 }
 
+function hasKanji(value: string) {
+  return kanjiPattern.test(value);
+}
+
+function makeKanjiBlank(value: string, seed: number) {
+  const kanjiIndexes = [...value].flatMap((char, index) => hasKanji(char) ? [index] : []);
+  const targetIndex = kanjiIndexes[Math.floor(seededValue(seed + 43) * kanjiIndexes.length)] ?? kanjiIndexes[0];
+  if (targetIndex === undefined) return null;
+
+  const chars = [...value];
+  const answerChar = chars[targetIndex];
+  chars[targetIndex] = "□";
+  return { prompt: chars.join(""), answerChar };
+}
+
+function pickKanjiDistractors(words: QuizWord[], answerChar: string, count: number, seed: number) {
+  const candidates = seededShuffle(
+    [...new Set(words.flatMap((word) => [...word.dictionaryForm].filter((char) => hasKanji(char) && char !== answerChar)))],
+    seed + 71,
+  );
+  return candidates.slice(0, count);
+}
+
+function resolveMode(mode: QuizMode, seed: number, hasKanjiWords: boolean): Exclude<QuizMode, "mixed"> {
+  if (mode !== "mixed") return mode;
+  const candidates: Array<Exclude<QuizMode, "mixed">> = hasKanjiWords
+    ? ["reading", "kanji-blank", "word-to-meaning", "meaning-to-word", "ox"]
+    : ["word-to-meaning", "meaning-to-word", "ox"];
+  return candidates[seed % candidates.length];
+}
+
 export function QuizSession({ words }: { words: QuizWord[] }) {
   const [mode, setMode] = useState<QuizMode>("multiple-choice");
   const [seed, setSeed] = useState(0);
@@ -67,11 +104,14 @@ export function QuizSession({ words }: { words: QuizWord[] }) {
 
   const question = useMemo<ChoiceQuestion | OxQuestion | null>(() => {
     const pool = seededShuffle(words, seed + mode.length);
-    const urgentPool = pool.filter((word) => word.confusionCount > 0);
-    const answer = urgentPool[seed % 3 === 0 ? 0 : seed % urgentPool.length] ?? pool[0];
+    const kanjiPool = pool.filter((word) => hasKanji(word.dictionaryForm));
+    const quizMode = resolveMode(mode, seed, kanjiPool.length > 0);
+    const usablePool = quizMode === "reading" || quizMode === "kanji-blank" ? kanjiPool : pool;
+    const urgentPool = usablePool.filter((word) => word.confusionCount > 0);
+    const answer = urgentPool[seed % 3 === 0 ? 0 : seed % urgentPool.length] ?? usablePool[0];
     if (!answer) return null;
 
-    if (mode === "meaning-to-word") {
+    if (quizMode === "meaning-to-word") {
       const choices = seededShuffle([answer, ...pickDistractors(pool, answer, 3)], seed + 11);
       return {
         answer,
@@ -86,7 +126,41 @@ export function QuizSession({ words }: { words: QuizWord[] }) {
       };
     }
 
-    if (mode === "word-to-meaning" || mode === "multiple-choice") {
+    if (quizMode === "reading") {
+      const choices = seededShuffle([answer, ...pickDistractors(kanjiPool, answer, 3)], seed + 19);
+      return {
+        answer,
+        prompt: answer.dictionaryForm,
+        helper: "이 한자 단어의 읽기를 골라보세요.",
+        choices: choices.map((item) => ({
+          id: item.id,
+          label: item.reading,
+          sublabel: item.meaningKo,
+          correct: item.id === answer.id,
+        })),
+      };
+    }
+
+    if (quizMode === "kanji-blank") {
+      const blank = makeKanjiBlank(answer.dictionaryForm, seed);
+      if (blank) {
+        const distractors = pickKanjiDistractors(kanjiPool, blank.answerChar, 3, seed);
+        const choices = seededShuffle([blank.answerChar, ...distractors], seed + 31);
+        return {
+          answer,
+          prompt: blank.prompt,
+          helper: `${answer.reading} · ${answer.meaningKo} · 빈칸에 들어갈 한자를 골라보세요.`,
+          promptClassName: "font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] tracking-normal",
+          choices: choices.map((char) => ({
+            id: char,
+            label: char,
+            correct: char === blank.answerChar,
+          })),
+        };
+      }
+    }
+
+    if (quizMode === "word-to-meaning" || quizMode === "multiple-choice") {
       const choices = seededShuffle([answer, ...pickDistractors(pool, answer, 3)], seed + 23);
       return {
         answer,
@@ -185,7 +259,7 @@ export function QuizSession({ words }: { words: QuizWord[] }) {
           <div className="min-w-0">
             <div className="rounded-3xl bg-[#faf5f1] p-4 sm:bg-transparent sm:p-0">
               <p className="text-sm font-bold text-[var(--accent)]">{MODE_LABELS[mode]}</p>
-              <h2 className="mt-3 break-words text-[2rem] font-bold leading-tight sm:mt-4 sm:text-4xl">{question.prompt}</h2>
+              <h2 className={`mt-3 break-words text-[2rem] font-bold leading-tight sm:mt-4 sm:text-4xl ${"promptClassName" in question ? question.promptClassName ?? "" : ""}`}>{question.prompt}</h2>
               <p className="mt-2 text-sm text-[var(--muted)] sm:mt-3">{question.helper}</p>
             </div>
 
