@@ -13,6 +13,8 @@ create table if not exists public.document_notes (
 
 alter table public.document_notes enable row level security;
 
+drop policy if exists "users manage own document notes" on public.document_notes;
+
 create policy "users manage own document notes" on public.document_notes for all
 using ((select auth.uid()) = user_id)
 with check (
