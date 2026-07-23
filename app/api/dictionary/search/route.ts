@@ -102,6 +102,7 @@ export async function GET(request: Request) {
     ? await admin.from("review_cards").select("vocabulary_id").eq("user_id", user.id).in("vocabulary_id", localVocabularyIds)
     : { data: [] };
   const savedVocabularyIds = new Set((savedCards ?? []).map((item) => item.vocabulary_id));
+  const savedVocabularyKeys = new Set(localVocabulary.map((item) => `${item.dictionary_form}\u0000${item.reading}`));
 
   let fallbackAiEntry: {
     id: string;
@@ -184,6 +185,7 @@ export async function GET(request: Request) {
         glosses: (entry.glosses_ko.length > 0 ? entry.glosses_ko : entry.glosses).slice(0, 6),
         partsOfSpeech: entry.parts_of_speech.slice(0, 4),
         isCommon: entry.is_common,
+        isSaved: savedVocabularyKeys.has(`${entry.primary_spelling ?? entry.primary_reading}\u0000${entry.primary_reading}`),
         source: "db" as const,
       })),
       ...(fallbackAiEntry ? [fallbackAiEntry] : []),
