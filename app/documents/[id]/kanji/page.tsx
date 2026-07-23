@@ -17,6 +17,15 @@ type SavedCard = {
   vocabulary_id: string;
 };
 
+type HanjaReading = {
+  hanja: string;
+  reading_ko: string | null;
+  meaning_ko: string | null;
+  sound_ko: string | null;
+  radical: string | null;
+  strokes: number | null;
+};
+
 type KanjiStudyCard = {
   kanji: string;
   words: Array<{
@@ -87,6 +96,13 @@ export default async function DocumentKanjiPage({ params }: { params: Promise<{ 
   const savedVocabularyIds = new Set(((savedCards ?? []) as SavedCard[]).map((card) => card.vocabulary_id));
   const cards = buildKanjiCards((documentVocabulary ?? []) as unknown as DocumentVocabulary[], savedVocabularyIds);
   const savedWordCount = new Set(cards.flatMap((card) => card.words.map((word) => word.id))).size;
+  const { data: hanjaReadings } = cards.length > 0
+    ? await supabase
+        .from("hanja_readings")
+        .select("hanja,reading_ko,meaning_ko,sound_ko,radical,strokes")
+        .in("hanja", cards.map((card) => card.kanji))
+    : { data: [] };
+  const hanjaReadingByChar = new Map(((hanjaReadings ?? []) as HanjaReading[]).map((item) => [item.hanja, item]));
 
   return (
     <main className="min-h-screen px-4 py-6 sm:px-6 sm:py-8 md:px-10">
@@ -117,7 +133,8 @@ export default async function DocumentKanjiPage({ params }: { params: Promise<{ 
             {cards.map((card) => {
               const meanings = [...new Set(card.words.flatMap((word) => word.meaningKo.split(/[;,，、]/).map((value) => value.trim()).filter(Boolean)))].slice(0, 3);
               const readings = [...new Set(card.words.map((word) => word.reading))].slice(0, 4);
-              const koreanReading = getKoreanHanjaReading(card.kanji);
+              const hanjaReading = hanjaReadingByChar.get(card.kanji);
+              const koreanReading = hanjaReading?.reading_ko || getKoreanHanjaReading(card.kanji);
 
               return (
                 <article key={card.kanji} className="rounded-3xl border border-[var(--line)] bg-white p-5">
@@ -126,13 +143,17 @@ export default async function DocumentKanjiPage({ params }: { params: Promise<{ 
                       <p className="font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-5xl font-black leading-none">{card.kanji}</p>
                       <p className="mt-3 text-sm font-bold text-[var(--accent)]">{meanings.join(" / ") || "저장 단어로 복습"}</p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-[#f1eee7] px-3 py-1 text-xs font-bold text-[var(--muted)]">{card.words.length}단어</span>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="rounded-full bg-[#f1eee7] px-3 py-1 text-xs font-bold text-[var(--muted)]">{card.words.length}단어</span>
+                      {hanjaReading?.radical && <span className="rounded-full bg-[#eef7ff] px-3 py-1 text-xs font-bold text-[#2c628d]">부수 {hanjaReading.radical}</span>}
+                    </div>
                   </div>
 
                   <dl className="mt-5 space-y-4">
                     <div>
                       <dt className="text-[11px] font-extrabold text-[var(--muted)]">한국식 한자 읽기</dt>
                       <dd className="mt-1 text-lg font-extrabold">{koreanReading ?? "저장 단어로 확인"}</dd>
+                      {hanjaReading?.strokes && <dd className="mt-1 text-xs font-bold text-[var(--muted)]">{hanjaReading.strokes}획</dd>}
                     </div>
 
                     <div>
