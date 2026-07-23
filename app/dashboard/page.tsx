@@ -69,7 +69,7 @@ export default async function DashboardPage() {
 
         {documents.length === 0 ? (
           <section className="mt-6 grid min-h-64 place-items-center rounded-3xl border border-dashed border-[#c9c9c1] bg-white/60 p-5 text-center sm:mt-8 sm:min-h-72 sm:p-8">
-            <div><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#f1eee7]"><FileText size={22} /></span><h2 className="mt-5 text-xl font-bold">첫 PDF를 올려보세요</h2><p className="mt-2 text-sm text-[var(--muted)]">20MB 이하의 일본어 학습 자료를 업로드할 수 있습니다.</p><PdfUploadButton variant="empty" /></div>
+            <div><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#f1eee7]"><FileText size={22} /></span><h2 className="mt-5 text-xl font-bold">첫 자료를 올려보세요</h2><p className="mt-2 text-sm text-[var(--muted)]">20MB 이하의 PDF나 JLPT 사진 자료를 업로드할 수 있습니다.</p><PdfUploadButton variant="empty" /></div>
           </section>
         ) : (
           <section className="mt-8 overflow-hidden rounded-3xl border border-[var(--line)] bg-white">
