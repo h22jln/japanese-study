@@ -32,8 +32,8 @@ export async function POST(request: Request) {
   if (!username || !/^[a-z0-9_]{4,20}$/.test(username)) {
     return NextResponse.json({ error: "아이디 형식을 확인해주세요." }, { status: 400 });
   }
-  if (password.length < 8) {
-    return NextResponse.json({ error: "비밀번호는 8자 이상이어야 합니다." }, { status: 400 });
+  if (!password) {
+    return NextResponse.json({ error: "새 비밀번호를 입력해주세요." }, { status: 400 });
   }
 
   const admin = createAdminSupabaseClient();
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
 
   const { error } = await admin.auth.admin.updateUserById(targetProfile.id, { password });
   if (error) {
-    return NextResponse.json({ error: "비밀번호 변경에 실패했습니다." }, { status: 500 });
+    return NextResponse.json({ error: error.message || "비밀번호 변경에 실패했습니다." }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

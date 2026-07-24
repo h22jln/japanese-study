@@ -21,8 +21,8 @@ export function AdminPasswordResetForm() {
       setMessage("아이디 형식을 확인해주세요.");
       return;
     }
-    if (password.length < 8) {
-      setMessage("비밀번호는 8자 이상이어야 합니다.");
+    if (!password) {
+      setMessage("새 비밀번호를 입력해주세요.");
       return;
     }
     if (password !== passwordConfirm) {
@@ -55,10 +55,10 @@ export function AdminPasswordResetForm() {
       <input id="username" name="username" required minLength={4} maxLength={20} autoCapitalize="none" autoComplete="username" spellCheck={false} placeholder="matane_user" className="w-full rounded-xl border border-[var(--line)] px-4 py-3 outline-none focus:border-[var(--accent)]" />
 
       <label className="block text-sm font-semibold" htmlFor="password">새 비밀번호</label>
-      <input id="password" name="password" type="password" required minLength={8} autoComplete="new-password" placeholder="8자 이상" className="w-full rounded-xl border border-[var(--line)] px-4 py-3 outline-none focus:border-[var(--accent)]" />
+      <input id="password" name="password" type="password" required autoComplete="new-password" placeholder="임시 비밀번호" className="w-full rounded-xl border border-[var(--line)] px-4 py-3 outline-none focus:border-[var(--accent)]" />
 
       <label className="block text-sm font-semibold" htmlFor="passwordConfirm">새 비밀번호 확인</label>
-      <input id="passwordConfirm" name="passwordConfirm" type="password" required minLength={8} autoComplete="new-password" className="w-full rounded-xl border border-[var(--line)] px-4 py-3 outline-none focus:border-[var(--accent)]" />
+      <input id="passwordConfirm" name="passwordConfirm" type="password" required autoComplete="new-password" className="w-full rounded-xl border border-[var(--line)] px-4 py-3 outline-none focus:border-[var(--accent)]" />
 
       <button disabled={isLoading} className="w-full rounded-xl bg-[var(--foreground)] px-4 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">
         {isLoading ? "변경 중..." : "비밀번호 변경"}

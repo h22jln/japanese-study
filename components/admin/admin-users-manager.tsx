@@ -23,8 +23,8 @@ export function AdminUsersManager({ initialUsers }: { initialUsers: AdminUserIte
     const password = String(formData.get(`password-${userId}`) ?? "");
     const passwordConfirm = String(formData.get(`passwordConfirm-${userId}`) ?? "");
 
-    if (password.length < 8) {
-      setMessages((current) => ({ ...current, [userId]: "비밀번호는 8자 이상이어야 합니다." }));
+    if (!password) {
+      setMessages((current) => ({ ...current, [userId]: "새 비밀번호를 입력해주세요." }));
       return;
     }
     if (password !== passwordConfirm) {
@@ -88,14 +88,12 @@ export function AdminUsersManager({ initialUsers }: { initialUsers: AdminUserIte
                 <input
                   name={`password-${user.id}`}
                   type="password"
-                  minLength={8}
                   placeholder="새 비밀번호"
                   className="w-full rounded-xl border border-[var(--line)] px-4 py-3 outline-none focus:border-[var(--accent)]"
                 />
                 <input
                   name={`passwordConfirm-${user.id}`}
                   type="password"
-                  minLength={8}
                   placeholder="비밀번호 확인"
                   className="w-full rounded-xl border border-[var(--line)] px-4 py-3 outline-none focus:border-[var(--accent)]"
                 />
