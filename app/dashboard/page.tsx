@@ -6,6 +6,7 @@ import { AnalyzeButton } from "@/components/documents/analyze-button";
 import { DocumentStatusRefresher } from "@/components/documents/document-status-refresher";
 import { PinDocumentButton } from "@/components/documents/pin-document-button";
 import { DeleteDocumentButton } from "@/components/documents/delete-document-button";
+import { isAdminUsername } from "@/lib/auth/admin";
 import Link from "next/link";
 
 type DocumentItem = {
@@ -41,7 +42,7 @@ export default async function DashboardPage() {
     if (!user) redirect("/login");
 
     const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).single();
-    if (profile?.username === "admin") redirect("/admin/users");
+    if (isAdminUsername(profile?.username)) redirect("/admin/users");
 
     const [{ data }, { count }, { count: savedGrammarCount }] = await Promise.all([
       supabase.from("documents").select("id,title,file_path,status,created_at,pinned_at").order("pinned_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),

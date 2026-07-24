@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isAdminUsername } from "@/lib/auth/admin";
 
 type AdminUserItem = {
   id: string;
@@ -63,6 +64,7 @@ export function AdminUsersManager({ initialUsers }: { initialUsers: AdminUserIte
     <div className="space-y-4">
       {users.map((user) => {
         const isSaving = savingIds.includes(user.id);
+        const isAdmin = isAdminUsername(user.username);
 
         return (
           <article key={user.id} className="rounded-2xl border border-[var(--line)] p-4 sm:p-5">
@@ -70,7 +72,7 @@ export function AdminUsersManager({ initialUsers }: { initialUsers: AdminUserIte
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-lg font-bold">{user.username}</h2>
-                  {user.username === "admin" && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">admin</span>}
+                  {isAdmin && <span className="rounded-full bg-[#f1eee7] px-2 py-0.5 text-[10px] font-bold">admin</span>}
                 </div>
                 <p className="mt-1 text-sm text-[var(--muted)]">{user.displayName || "표시 이름 없음"}</p>
                 <p className="mt-1 text-xs text-[var(--muted)]">가입일 {new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(new Date(user.createdAt))}</p>
@@ -102,7 +104,7 @@ export function AdminUsersManager({ initialUsers }: { initialUsers: AdminUserIte
                 </button>
                 <button
                   type="button"
-                  disabled={isSaving || user.username === "admin"}
+                  disabled={isSaving || isAdmin}
                   onClick={() => void deleteUser(user.id, user.username)}
                   className="rounded-xl border border-[#e2c3bd] bg-[#fff4f1] px-4 py-3 text-sm font-bold text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
                 >

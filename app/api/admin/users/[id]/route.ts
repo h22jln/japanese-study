@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { isAdminUsername } from "@/lib/auth/admin";
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createServerSupabaseClient();
@@ -15,7 +16,7 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
     .eq("id", user.id)
     .single();
 
-  if (profile?.username !== "admin") {
+  if (!isAdminUsername(profile?.username)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -30,8 +31,8 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   if (!targetProfile) {
     return NextResponse.json({ error: "대상 사용자를 찾을 수 없습니다." }, { status: 404 });
   }
-  if (targetProfile.username === "admin") {
-    return NextResponse.json({ error: "admin 계정은 삭제할 수 없습니다." }, { status: 400 });
+  if (isAdminUsername(targetProfile.username)) {
+    return NextResponse.json({ error: "관리자 계정은 삭제할 수 없습니다." }, { status: 400 });
   }
 
   const { error } = await admin.auth.admin.deleteUser(id);

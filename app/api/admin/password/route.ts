@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { isAdminUsername } from "@/lib/auth/admin";
 
 type Payload = {
   username?: string;
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     .eq("id", user.id)
     .single();
 
-  if (profile?.username !== "admin") {
+  if (!isAdminUsername(profile?.username)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

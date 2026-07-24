@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { AdminUsersManager } from "@/components/admin/admin-users-manager";
+import { isAdminUsername } from "@/lib/auth/admin";
 
 type AdminUserItem = {
   id: string;
@@ -23,7 +24,7 @@ export default async function AdminUsersPage() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.username !== "admin") redirect("/dashboard");
+  if (!isAdminUsername(profile?.username)) redirect("/dashboard");
 
   const admin = createAdminSupabaseClient();
   const { data: profiles } = await admin
