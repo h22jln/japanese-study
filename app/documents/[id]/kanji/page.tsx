@@ -66,6 +66,17 @@ function buildKanjiCards(vocabularyItems: DocumentVocabulary[], savedVocabularyI
   return [...cards.values()].sort((a, b) => b.words.length - a.words.length || a.kanji.localeCompare(b.kanji, "ja"));
 }
 
+function resolveKoreanReading(kanji: string, reading?: HanjaReading) {
+  const dbReading = reading?.reading_ko?.trim();
+  if (dbReading) return dbReading;
+
+  const meaning = reading?.meaning_ko?.trim();
+  const sound = reading?.sound_ko?.trim();
+  if (meaning && sound) return `${meaning} ${sound}`;
+
+  return getKoreanHanjaReading(kanji);
+}
+
 export default async function DocumentKanjiPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
@@ -131,16 +142,14 @@ export default async function DocumentKanjiPage({ params }: { params: Promise<{ 
         ) : (
           <section className="mt-8 grid gap-3 sm:mt-10 sm:grid-cols-2 xl:grid-cols-3">
             {cards.map((card) => {
-              const meanings = [...new Set(card.words.flatMap((word) => word.meaningKo.split(/[;,，、]/).map((value) => value.trim()).filter(Boolean)))].slice(0, 3);
               const hanjaReading = hanjaReadingByChar.get(card.kanji);
-              const koreanReading = hanjaReading?.reading_ko || getKoreanHanjaReading(card.kanji);
+              const koreanReading = resolveKoreanReading(card.kanji, hanjaReading);
 
               return (
                 <article key={card.kanji} className="rounded-3xl border border-[var(--line)] bg-white p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-5xl font-black leading-none">{card.kanji}</p>
-                      <p className="mt-3 text-sm font-bold text-[var(--accent)]">{meanings.join(" / ") || "저장 단어로 복습"}</p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <span className="rounded-full bg-[#f1eee7] px-3 py-1 text-xs font-bold text-[var(--muted)]">{card.words.length}단어</span>
