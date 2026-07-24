@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getKoreanHanjaReading } from "@/lib/kanji-korean-readings";
+import { getKoreanHanjaRadical, getKoreanHanjaReading } from "@/lib/kanji-korean-readings";
 
 type DocumentVocabulary = {
   vocabulary: {
@@ -144,6 +144,7 @@ export default async function DocumentKanjiPage({ params }: { params: Promise<{ 
             {cards.map((card) => {
               const hanjaReading = hanjaReadingByChar.get(card.kanji);
               const koreanReading = resolveKoreanReading(card.kanji, hanjaReading);
+              const radical = hanjaReading?.radical || getKoreanHanjaRadical(card.kanji);
 
               return (
                 <article key={card.kanji} className="rounded-3xl border border-[var(--line)] bg-white p-5">
@@ -153,7 +154,7 @@ export default async function DocumentKanjiPage({ params }: { params: Promise<{ 
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <span className="rounded-full bg-[#f1eee7] px-3 py-1 text-xs font-bold text-[var(--muted)]">{card.words.length}단어</span>
-                      {hanjaReading?.radical && <span className="rounded-full bg-[#eef7ff] px-3 py-1 text-xs font-bold text-[#2c628d]">부수 {hanjaReading.radical}</span>}
+                      {radical && <span className="rounded-full bg-[#eef7ff] px-3 py-1 text-xs font-bold text-[#2c628d]">부수 {radical}</span>}
                     </div>
                   </div>
 

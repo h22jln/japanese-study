@@ -211,6 +211,61 @@ const koreanHanjaReadings: Record<string, string> = {
   敬: "공경 경",
 };
 
+const koreanHanjaRadicals: Record<string, string> = {
+  認: "言",
+  許: "言",
+  語: "言",
+  読: "言",
+  話: "言",
+  言: "言",
+  確: "石",
+  可: "口",
+  承: "手",
+  多: "夕",
+  成: "戈",
+  果: "木",
+  主: "丶",
+  義: "羊",
+  序: "广",
+  列: "刀",
+  経: "糸",
+  営: "口",
+  業: "木",
+  企: "人",
+  価: "人",
+  値: "人",
+  給: "糸",
+  料: "斗",
+  賃: "貝",
+  収: "又",
+  決: "水",
+  定: "宀",
+  変: "夂",
+  化: "人",
+  関: "門",
+  係: "人",
+  理: "玉",
+  由: "田",
+  必: "心",
+  要: "襾",
+  重: "里",
+  点: "火",
+  例: "人",
+  直: "目",
+  感: "心",
+  振: "手",
+  勢: "力",
+  輩: "車",
+  存: "子",
+  在: "土",
+  尊: "寸",
+  敬: "攴",
+};
+
 export function getKoreanHanjaReading(kanji: string) {
   return koreanHanjaReadings[kanji] ?? null;
+}
+
+export function getKoreanHanjaRadical(kanji: string) {
+  return koreanHanjaRadicals[kanji] ?? null;
 }
