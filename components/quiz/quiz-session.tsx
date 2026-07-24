@@ -101,14 +101,17 @@ export function QuizSession({ words }: { words: QuizWord[] }) {
   const [score, setScore] = useState({ solved: 0, correct: 0 });
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [oxSelection, setOxSelection] = useState<boolean | null>(null);
+  const [seenWordIds, setSeenWordIds] = useState<string[]>([]);
 
   const question = useMemo<ChoiceQuestion | OxQuestion | null>(() => {
     const pool = seededShuffle(words, seed + mode.length);
     const kanjiPool = pool.filter((word) => hasKanji(word.dictionaryForm));
     const quizMode = resolveMode(mode, seed, kanjiPool.length > 0);
     const usablePool = quizMode === "reading" || quizMode === "kanji-blank" ? kanjiPool : pool;
-    const urgentPool = usablePool.filter((word) => word.confusionCount > 0);
-    const answer = urgentPool[seed % 3 === 0 ? 0 : seed % urgentPool.length] ?? usablePool[0];
+    const unseenPool = usablePool.filter((word) => !seenWordIds.includes(word.id));
+    const answerPool = unseenPool.length > 0 ? unseenPool : usablePool;
+    const urgentPool = answerPool.filter((word) => word.confusionCount > 0);
+    const answer = urgentPool[seed % 3 === 0 ? 0 : seed % urgentPool.length] ?? answerPool[0];
     if (!answer) return null;
 
     if (quizMode === "meaning-to-word") {
@@ -184,7 +187,7 @@ export function QuizSession({ words }: { words: QuizWord[] }) {
       oxMeaning: showTrue ? answer.meaningKo : wrongWord.meaningKo,
       oxCorrect: showTrue,
     };
-  }, [mode, seed, words]);
+  }, [mode, seed, seenWordIds, words]);
 
   if (!question) return null;
 
@@ -198,7 +201,11 @@ export function QuizSession({ words }: { words: QuizWord[] }) {
   const isOxCorrect = oxQuestion && oxSelection !== null ? oxSelection === oxQuestion.oxCorrect : null;
   const isAnswered = mode === "ox" ? oxSelection !== null : selectedChoice !== null;
 
-  function moveNext(correct: boolean) {
+  function moveNext(correct: boolean, answerId: string) {
+    setSeenWordIds((current) => {
+      if (current.includes(answerId)) return current;
+      return [...current, answerId];
+    });
     setScore((current) => ({
       solved: current.solved + 1,
       correct: current.correct + (correct ? 1 : 0),
@@ -212,6 +219,7 @@ export function QuizSession({ words }: { words: QuizWord[] }) {
     setMode(nextMode);
     setSelectedChoice(null);
     setOxSelection(null);
+    setSeenWordIds([]);
     setSeed((value) => value + 1);
   }
 
@@ -245,6 +253,7 @@ export function QuizSession({ words }: { words: QuizWord[] }) {
               setScore({ solved: 0, correct: 0 });
               setSelectedChoice(null);
               setOxSelection(null);
+              setSeenWordIds([]);
               setSeed((value) => value + 1);
             }}
             className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] sm:px-4 sm:py-2 sm:text-sm"
@@ -336,7 +345,7 @@ export function QuizSession({ words }: { words: QuizWord[] }) {
                   <p className="mt-2 text-sm font-semibold sm:mt-3">{question.answer.meaningKo}</p>
                   <button
                     type="button"
-                    onClick={() => moveNext(Boolean(choiceQuestion ? isChoiceCorrect : isOxCorrect))}
+                    onClick={() => moveNext(Boolean(choiceQuestion ? isChoiceCorrect : isOxCorrect), question.answer.id)}
                     className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-sm font-semibold text-white sm:mt-5 sm:h-11 sm:px-5"
                   >
                     다음 문제
