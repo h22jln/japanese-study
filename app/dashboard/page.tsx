@@ -24,6 +24,10 @@ function getDocumentKind(filePath: string) {
     : { label: "PDF", className: "bg-[#f1eee7] text-[var(--muted)]" };
 }
 
+function getDocumentType(filePath: string) {
+  return /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(filePath) ? "jlpt" : "pdf";
+}
+
 const statusLabels: Record<DocumentItem["status"], string> = {
   queued: "분석 대기",
   processing: "분석 중",
@@ -31,7 +35,9 @@ const statusLabels: Record<DocumentItem["status"], string> = {
   failed: "분석 실패",
 };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams?: Promise<{ type?: string }> }) {
+  const params = await searchParams;
+  const activeType = params?.type === "pdf" || params?.type === "jlpt" ? params.type : "all";
   const supabase = await createServerSupabaseClient();
   let documents: DocumentItem[] = [];
   let vocabularyCount = 0;
@@ -53,6 +59,16 @@ export default async function DashboardPage() {
     vocabularyCount = count ?? 0;
     grammarCount = savedGrammarCount ?? 0;
   }
+  const pdfCount = documents.filter((document) => getDocumentType(document.file_path) === "pdf").length;
+  const jlptCount = documents.filter((document) => getDocumentType(document.file_path) === "jlpt").length;
+  const visibleDocuments = activeType === "all"
+    ? documents
+    : documents.filter((document) => getDocumentType(document.file_path) === activeType);
+  const tabs = [
+    { href: "/dashboard", label: "전체", count: documents.length, active: activeType === "all" },
+    { href: "/dashboard?type=pdf", label: "PDF", count: pdfCount, active: activeType === "pdf" },
+    { href: "/dashboard?type=jlpt", label: "JLPT 사진", count: jlptCount, active: activeType === "jlpt" },
+  ];
 
   return (
     <main className="min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 md:px-10">
@@ -81,9 +97,35 @@ export default async function DashboardPage() {
           </section>
         ) : (
           <section className="mt-8 overflow-hidden rounded-3xl border border-[var(--line)] bg-white">
-            <div className="border-b border-[var(--line)] px-4 py-4 sm:px-6 sm:py-5"><h2 className="font-bold">최근 자료</h2></div>
+            <div className="border-b border-[var(--line)] px-4 py-4 sm:px-6 sm:py-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="font-bold">최근 자료</h2>
+                <nav className="flex flex-wrap gap-2" aria-label="자료 종류">
+                  {tabs.map((tab) => (
+                    <Link
+                      key={tab.href}
+                      href={tab.href}
+                      className={`inline-flex min-h-8 items-center rounded-full px-3 text-xs font-bold transition ${
+                        tab.active ? "bg-[var(--accent)] text-white" : "bg-[#f7f7f4] text-[var(--muted)] hover:text-[var(--foreground)]"
+                      }`}
+                    >
+                      {tab.label} {tab.count}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+            </div>
+            {visibleDocuments.length === 0 ? (
+              <div className="grid min-h-48 place-items-center p-6 text-center">
+                <div>
+                  <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#f1eee7]"><FileText size={20} /></span>
+                  <h3 className="mt-4 font-bold">{activeType === "pdf" ? "PDF 자료가 없어요" : "JLPT 사진 자료가 없어요"}</h3>
+                  <p className="mt-1 text-sm text-[var(--muted)]">상단 버튼으로 새 자료를 올릴 수 있습니다.</p>
+                </div>
+              </div>
+            ) : (
             <ul className="divide-y divide-[var(--line)]">
-              {documents.map((document) => (
+              {visibleDocuments.map((document) => (
                 <li key={document.id} className="flex flex-col items-stretch gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
                   {(() => {
                     const kind = getDocumentKind(document.file_path);
@@ -107,6 +149,7 @@ export default async function DashboardPage() {
                 </li>
               ))}
             </ul>
+            )}
           </section>
         )}
       </div>

@@ -47,7 +47,9 @@ export function PdfUploadButton({ variant = "primary" }: PdfUploadButtonProps) {
     const documentId = crypto.randomUUID();
     const extension = isPdf ? "pdf" : (imageExtension ?? fileName.split(".").pop() ?? "jpg");
     const filePath = `${user.id}/${documentId}.${extension}`;
-    const title = file.name.replace(/\.(pdf|jpg|jpeg|png|webp|heic|heif)$/i, "").slice(0, 200) || "제목 없는 자료";
+    const title = kind === "jlpt-image"
+      ? "JLPT 사진 자료"
+      : file.name.replace(/\.pdf$/i, "").slice(0, 200) || "제목 없는 PDF";
 
     const { error: uploadError } = await supabase.storage
       .from("documents")
