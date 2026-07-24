@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Languages } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getKoreanHanjaReading } from "@/lib/kanji-korean-readings";
@@ -132,7 +132,6 @@ export default async function DocumentKanjiPage({ params }: { params: Promise<{ 
           <section className="mt-8 grid gap-3 sm:mt-10 sm:grid-cols-2 xl:grid-cols-3">
             {cards.map((card) => {
               const meanings = [...new Set(card.words.flatMap((word) => word.meaningKo.split(/[;,，、]/).map((value) => value.trim()).filter(Boolean)))].slice(0, 3);
-              const readings = [...new Set(card.words.map((word) => word.reading))].slice(0, 4);
               const hanjaReading = hanjaReadingByChar.get(card.kanji);
               const koreanReading = hanjaReading?.reading_ko || getKoreanHanjaReading(card.kanji);
 
@@ -157,28 +156,15 @@ export default async function DocumentKanjiPage({ params }: { params: Promise<{ 
                     </div>
 
                     <div>
-                      <dt className="flex items-center gap-1.5 text-[11px] font-extrabold text-[var(--muted)]"><Languages size={13} /> 단어 읽기</dt>
-                      <dd className="mt-1 flex flex-wrap gap-1.5">
-                        {readings.map((reading) => (
-                          <span key={reading} className="rounded-full bg-[#f7f7f4] px-2.5 py-1 font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-sm font-bold">{reading}</span>
-                        ))}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt className="text-[11px] font-extrabold text-[var(--muted)]">외우는 단서</dt>
-                      <dd className="mt-1 text-sm leading-6">
-                        {card.words[0]?.word}에서 {card.kanji}가 어떻게 쓰였는지 먼저 기억하고, 같은 글자가 들어간 저장 단어를 묶어서 복습하세요.
-                      </dd>
-                    </div>
-
-                    <div>
                       <dt className="text-[11px] font-extrabold text-[var(--muted)]">저장한 단어</dt>
                       <dd className="mt-2 grid gap-2">
                         {card.words.map((word) => (
-                          <div key={`${card.kanji}-${word.id}`} className="rounded-2xl bg-[#f7f7f4] p-3">
-                            <p className="break-words font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] font-bold">{word.word}</p>
-                            <p className="mt-0.5 break-words text-xs text-[var(--muted)]">{word.reading} · {word.meaningKo}</p>
+                          <div key={`${card.kanji}-${word.id}`} className="grid gap-2 rounded-2xl bg-[#f7f7f4] p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] sm:items-end">
+                            <div className="min-w-0">
+                              <p className="break-words font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-xs font-bold text-[var(--muted)]">{word.reading}</p>
+                              <p className="mt-1 break-words font-['Noto_Sans_JP','Noto_Sans_KR',Arial,sans-serif] text-2xl font-black leading-snug">{word.word}</p>
+                            </div>
+                            <p className="min-w-0 break-words text-base font-bold leading-7 sm:text-right">{word.meaningKo}</p>
                           </div>
                         ))}
                       </dd>
